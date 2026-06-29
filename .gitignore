@@ -1,0 +1,17 @@
+# Secrets — NEVER commit
+client_secret_*.json
+cotizador-*.json
+*.key
+.env
+.env.local
+
+# Nested dashboard repo (tracked separately under dashboard/.git)
+/dashboard/
+
+# Deps / build
+node_modules/
+.next/
+
+# OS
+Thumbs.db
+.DS_Store
