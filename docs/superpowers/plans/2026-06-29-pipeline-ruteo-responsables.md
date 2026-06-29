@@ -4,6 +4,9 @@
 
 **Goal:** Extender el track Compras del Pipeline del dashboard con ruteo logístico (ruta/modalidad/destino/recolecciones) y trabajos marcables (cargas/entrada/ticket+empaque) con dato + quién/cuándo, más filtros pull por trabajo en el board.
 
+> **Estado (2026-06-29):** Código completo — Tasks 1–5 implementadas y commiteadas; `npm test` 104/104 verde, `tsc --noEmit` limpio.
+> **⚠️ PENDIENTE (paso manual, una vez):** reordenar/insertar encabezados en la hoja `Pipeline` real para que coincidan con la tabla de columnas A..AB (15 nuevas + `editadoPor`/`editadoFecha` al final). **Sin este paso las escrituras desalinean columnas.** Ver sección "Verificación manual" y "Orden de columnas".
+
 **Architecture:** Se agregan 15 columnas planas a la hoja `Pipeline` y a `PipelineRecord`. La captura ocurre en `OpDrawer` (dos bloques nuevos), el estampado de quién/cuándo se hace server-side en la ruta `PATCH /api/pipeline/[opId]`, y la visibilidad por trabajo son filtros front en `PipelineBoard`. La máquina de etapas no cambia.
 
 **Tech Stack:** Next.js 14 (App Router), TypeScript, googleapis (Google Sheets), Vitest + @testing-library/react.
