@@ -4,8 +4,14 @@
 
 **Goal:** Extender el track Compras del Pipeline del dashboard con ruteo logístico (ruta/modalidad/destino/recolecciones) y trabajos marcables (cargas/entrada/ticket+empaque) con dato + quién/cuándo, más filtros pull por trabajo en el board.
 
-> **Estado (2026-06-29):** Código completo — Tasks 1–5 implementadas y commiteadas; `npm test` 104/104 verde, `tsc --noEmit` limpio.
-> **⚠️ PENDIENTE (paso manual, una vez):** reordenar/insertar encabezados en la hoja `Pipeline` real para que coincidan con la tabla de columnas A..AB (15 nuevas + `editadoPor`/`editadoFecha` al final). **Sin este paso las escrituras desalinean columnas.** Ver sección "Verificación manual" y "Orden de columnas".
+> **Estado (2026-06-29):** Código completo — Tasks 1–5 implementadas y commiteadas; `npm test` 107/107 verde, `tsc --noEmit` limpio.
+>
+> **Sync app↔hoja por NOMBRE de encabezado (refactor posterior):** `pipelineClient` ya no lee/escribe por posición fija — mapea cada campo a su columna por el label del encabezado (`buildColIndex`). Implicaciones:
+> - **NO se requiere reordenar columnas.** El orden físico de la hoja es irrelevante.
+> - Columnas ausentes del encabezado → se leen como `''` y no se escriben (cero desalineación / cero corrupción).
+> - La hoja vieja de 13 columnas sigue funcionando tal cual; `editadoPor`/`editadoFecha` se leen de su columna real.
+>
+> **Paso manual restante (una vez, sin riesgo):** agregar los 15 encabezados nuevos en la fila 1 de la hoja `Pipeline` (cualquier orden/posición): `Ruta, Modalidad, Destino, Recolecciones, Cargas Hecho, Cargas Num, Cargas Por, Cargas Fecha, Entrada Hecho, Entrada Por, Entrada Fecha, Ticket Empaque Hecho, Ticket Empaque Nota, Ticket Empaque Por, Ticket Empaque Fecha`. Hasta agregarlos, los datos de ruteo/trabajos no persisten (pero nada se corrompe).
 
 **Architecture:** Se agregan 15 columnas planas a la hoja `Pipeline` y a `PipelineRecord`. La captura ocurre en `OpDrawer` (dos bloques nuevos), el estampado de quién/cuándo se hace server-side en la ruta `PATCH /api/pipeline/[opId]`, y la visibilidad por trabajo son filtros front en `PipelineBoard`. La máquina de etapas no cambia.
 
