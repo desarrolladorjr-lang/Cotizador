@@ -4,6 +4,8 @@
 
 **Goal:** Persist every OC Directa as an `.xlsx` (official template, formulas intact) plus two PNG snapshots in Dropbox — the single source of truth — with a dashboard list that can open, edit, and re-save any order, including the async MTY-consecutivo flow.
 
+> **Estado (2026-07-07):** Tasks 1–8 implementadas y commiteadas en `dashboard/` (master); `npm test` 218/218 verde, `tsc --noEmit` limpio, build OK. Preview desplegado. **Pendiente:** Task 9 (QA manual flujos Mérida/MTY/edición) y regenerar `DROPBOX_APP_SECRET` (expuesto en chat) actualizándolo en Vercel.
+
 **Architecture:** A thin Dropbox HTTP client (refresh-token auth) plus an ExcelJS module that writes/reads only the template's input cells. Three authenticated API routes (list / open / save) sit between the browser and Dropbox. The existing `OrdenDirectaForm` gains save-to-Dropbox (client captures the two rendered print documents to PNG with html2canvas) and a new `OrdenesDirectas` list container becomes the section's entry point.
 
 **Tech Stack:** Next.js 14 (App Router), TypeScript, Vitest, ExcelJS (new dep), html2canvas (new dep), Dropbox HTTP API v2. No Dropbox SDK — plain `fetch`.
