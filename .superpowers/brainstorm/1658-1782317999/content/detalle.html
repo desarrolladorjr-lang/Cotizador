@@ -1,0 +1,76 @@
+<h2>Al abrir una operación (clic en tarjeta/fila)</h2>
+<p class="subtitle">Panel lateral con línea de tiempo + captura ligera. ¿Este enfoque funciona? Clic en A o B.</p>
+
+<div class="split">
+
+  <div class="mockup">
+    <div class="mockup-header">A · Panel con timeline vertical</div>
+    <div class="mockup-body" style="background:#1a1a1a;padding:14px;font-size:11px">
+      <div style="color:#fff;font-weight:800;font-size:15px">CT-1042 · Aluminio</div>
+      <div style="color:#aaa;margin-bottom:12px">Acme Corp · Compra para inventario</div>
+
+      <div style="border-left:2px solid #3a9d4e;padding:0 0 10px 12px;position:relative">
+        <div style="color:#3a9d4e;font-weight:700">✓ Instrucción</div>
+        <div style="color:#888">PO-8841 · Acme · $2.30 · 13 jun</div>
+      </div>
+      <div style="border-left:2px solid #3a9d4e;padding:0 0 10px 12px">
+        <div style="color:#3a9d4e;font-weight:700">✓ OC enviada</div>
+        <div style="color:#888">14 jun</div>
+      </div>
+      <div style="border-left:2px solid #d4a017;padding:0 0 10px 12px">
+        <div style="color:#d4a017;font-weight:700">● Recolección (actual)</div>
+        <div style="color:#888">SDL-220 · en ruta</div>
+        <div style="margin-top:6px">
+          <span style="background:#e8762a;color:#fff;padding:4px 10px;border-radius:4px;font-weight:700">Marcar entregado →</span>
+        </div>
+      </div>
+      <div style="border-left:2px dashed #555;padding:0 0 10px 12px">
+        <div style="color:#777">○ Ingreso</div>
+      </div>
+      <div style="border-left:2px dashed #555;padding:0 0 0 12px">
+        <div style="color:#777">○ CxP</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">B · Pasos horizontales + form</div>
+    <div class="mockup-body" style="background:#1a1a1a;padding:14px;font-size:11px">
+      <div style="color:#fff;font-weight:800;font-size:15px">CT-1042 · Aluminio</div>
+      <div style="color:#aaa;margin-bottom:12px">Acme Corp · Compra para inventario</div>
+
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:14px;font-size:9px;text-align:center">
+        <div style="flex:1"><div style="width:18px;height:18px;border-radius:50%;background:#3a9d4e;margin:0 auto;color:#fff;line-height:18px">✓</div>Instr</div>
+        <div style="flex:1;border-top:1px solid #555"></div>
+        <div style="flex:1"><div style="width:18px;height:18px;border-radius:50%;background:#3a9d4e;margin:0 auto;color:#fff;line-height:18px">✓</div>OC</div>
+        <div style="flex:1;border-top:1px solid #555"></div>
+        <div style="flex:1"><div style="width:18px;height:18px;border-radius:50%;background:#d4a017;margin:0 auto;color:#fff;line-height:18px">3</div>Recol</div>
+        <div style="flex:1;border-top:1px solid #555"></div>
+        <div style="flex:1"><div style="width:18px;height:18px;border-radius:50%;background:#444;margin:0 auto;color:#999;line-height:18px">4</div>Ingr</div>
+        <div style="flex:1;border-top:1px solid #555"></div>
+        <div style="flex:1"><div style="width:18px;height:18px;border-radius:50%;background:#444;margin:0 auto;color:#999;line-height:18px">5</div>CxP</div>
+      </div>
+
+      <div style="background:#2a2a2a;border-radius:6px;padding:10px">
+        <div style="color:#e8762a;font-weight:700;margin-bottom:6px">Etapa actual: Recolección</div>
+        <div style="color:#aaa;margin-bottom:3px">No. SDL</div>
+        <div style="background:#1a1a1a;border:1px solid #444;border-radius:4px;padding:5px;color:#fff;margin-bottom:6px">SDL-220</div>
+        <div style="color:#aaa;margin-bottom:3px">Estatus</div>
+        <div style="background:#1a1a1a;border:1px solid #444;border-radius:4px;padding:5px;color:#fff;margin-bottom:8px">En ruta ▾</div>
+        <span style="background:#e8762a;color:#fff;padding:5px 12px;border-radius:4px;font-weight:700">Guardar y avanzar →</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="options" style="margin-top:16px">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content"><h3>Timeline vertical</h3><p>Historia completa visible de un vistazo, captura en la etapa activa.</p></div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content"><h3>Pasos + formulario</h3><p>Barra de progreso arriba, formulario enfocado en la etapa actual abajo.</p></div>
+  </div>
+</div>

@@ -1,0 +1,8 @@
+Task 1: complete (commits 33bafea..2be49fa, review clean — minor: vite version type clash in tsc, tracked not blocking)
+Task 2: complete (commit 02bb3df, review clean — minor notes on untested live-API path, non-blocking)
+Task 3: complete (commits ec1c3a0,0c38851, review clean — fixed Important bug: fecha is DD/MM/YYYY not ISO, sort now parses correctly)
+Task 4: complete (commit 55225af, review clean)
+Task 5: complete (commit 348dd74, review clean, 11/11 suite green)
+Task 6: complete (commit 48d2440, review clean — justified deviations: span-per-value for getByText exact match, Fragment key fix)
+Task 7: complete (commit 497044c, review clean, 18/18 suite green)
+Task 8: complete (commit 8b84279, verified verbatim, all 8 tasks done)

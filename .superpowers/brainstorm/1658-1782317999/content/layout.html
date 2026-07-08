@@ -1,0 +1,95 @@
+<h2>¿Cómo se ve el tablero del pipeline?</h2>
+<p class="subtitle">Misma data (operaciones por etapa), tres formas de verla. Haz clic en la que prefieras.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="kanban" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:10px;background:#1a1a1a">
+      <div style="display:flex;gap:6px;font-size:9px">
+        <div style="flex:1">
+          <div style="color:#e8762a;font-weight:700;margin-bottom:4px">INSTRUCCIÓN</div>
+          <div style="background:#2a2a2a;border-radius:4px;padding:5px;margin-bottom:4px;border-left:3px solid #e8762a">
+            <div style="color:#fff;font-weight:700">CT-1042</div>
+            <div style="color:#aaa">Alum · Acme</div>
+          </div>
+          <div style="background:#2a2a2a;border-radius:4px;padding:5px;border-left:3px solid #e8762a">
+            <div style="color:#fff;font-weight:700">CT-1051</div>
+            <div style="color:#aaa">Cobre · Mx</div>
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="color:#e8762a;font-weight:700;margin-bottom:4px">RECOLECCIÓN</div>
+          <div style="background:#2a2a2a;border-radius:4px;padding:5px;border-left:3px solid #d4a017">
+            <div style="color:#fff;font-weight:700">CT-1039</div>
+            <div style="color:#aaa">SDL-220</div>
+          </div>
+        </div>
+        <div style="flex:1">
+          <div style="color:#e8762a;font-weight:700;margin-bottom:4px">INGRESO</div>
+          <div style="background:#2a2a2a;border-radius:4px;padding:5px;border-left:3px solid #3a9d4e">
+            <div style="color:#fff;font-weight:700">CT-1033</div>
+            <div style="color:#aaa">Ent-118</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · Kanban (tipo Trello)</h3>
+      <p>Columnas = etapas. Cada operación es una tarjeta. Arrastras o clic para avanzar. Muy visual, ves cuellos de botella al instante.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="tabla" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:10px;background:#1a1a1a">
+      <div style="font-size:9px">
+        <div style="display:flex;gap:4px;margin-bottom:4px">
+          <span style="background:#e8762a;color:#fff;padding:2px 6px;border-radius:3px">Todas</span>
+          <span style="background:#2a2a2a;color:#aaa;padding:2px 6px;border-radius:3px">Compras</span>
+          <span style="background:#2a2a2a;color:#aaa;padding:2px 6px;border-radius:3px">Ventas</span>
+          <span style="background:#2a2a2a;color:#aaa;padding:2px 6px;border-radius:3px">CxP</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;color:#ddd">
+          <tr style="color:#e8762a;text-align:left"><th>Contrato</th><th>Material</th><th>Etapa</th><th>Estatus</th></tr>
+          <tr style="border-top:1px solid #333"><td>CT-1042</td><td>Alum</td><td>Instrucción</td><td>🟠 OC pend</td></tr>
+          <tr style="border-top:1px solid #333"><td>CT-1039</td><td>Cobre</td><td>Recolección</td><td>🟡 En ruta</td></tr>
+          <tr style="border-top:1px solid #333"><td>CT-1033</td><td>Acero</td><td>Ingreso</td><td>🟢 Bodega</td></tr>
+          <tr style="border-top:1px solid #333"><td>CT-1028</td><td>Alum</td><td>CxP</td><td>🔴 Por pagar</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · Tabla con filtros</h3>
+      <p>Lista densa, filtras por etapa/tipo/estatus. Cercano al dashboard actual. Mejor para mucho volumen y buscar rápido.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="hibrido" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:10px;background:#1a1a1a">
+      <div style="font-size:9px">
+        <div style="display:flex;gap:4px;margin-bottom:6px">
+          <span style="background:#e8762a;color:#fff;padding:2px 8px;border-radius:3px">▦ Kanban</span>
+          <span style="background:#2a2a2a;color:#aaa;padding:2px 8px;border-radius:3px">▤ Tabla</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <div style="flex:1">
+            <div style="color:#e8762a;font-weight:700;margin-bottom:3px">INSTRUCCIÓN</div>
+            <div style="background:#2a2a2a;border-radius:4px;padding:4px;border-left:3px solid #e8762a;color:#fff">CT-1042</div>
+          </div>
+          <div style="flex:1">
+            <div style="color:#e8762a;font-weight:700;margin-bottom:3px">RECOLECCIÓN</div>
+            <div style="background:#2a2a2a;border-radius:4px;padding:4px;border-left:3px solid #d4a017;color:#fff">CT-1039</div>
+          </div>
+          <div style="flex:1">
+            <div style="color:#e8762a;font-weight:700;margin-bottom:3px">INGRESO</div>
+            <div style="background:#2a2a2a;border-radius:4px;padding:4px;border-left:3px solid #3a9d4e;color:#fff">CT-1033</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · Híbrido (toggle)</h3>
+      <p>Un botón cambia entre Kanban y Tabla sobre la misma data. Kanban para operar día a día, Tabla para reportes/búsqueda. Más trabajo pero lo mejor de ambos.</p>
+    </div>
+  </div>
+
+</div>
