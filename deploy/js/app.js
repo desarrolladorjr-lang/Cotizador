@@ -816,8 +816,8 @@ function App() {
                       setComprasTipo(val);
                       setIntencionVentaModalidad('');
                       if (val === 'inventario') {
-                        setComprasOrigenFlete('GRAL. ESCOBÉDO, NL');
-                        setComprasDestinoFlete('');
+                        setComprasOrigenFlete('');
+                        setComprasDestinoFlete('GRAL. ESCOBÉDO, NL');
                         setFleteNac("0");
                       } else {
                         setComprasOrigenFlete('');
@@ -846,7 +846,13 @@ function App() {
                       <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Origen</label>
                       <select
                         value={comprasOrigenFlete}
-                        onChange={e => { setComprasOrigenFlete(e.target.value); setComprasDestinoFlete(''); setFleteNac("0"); }}
+                        onChange={e => {
+                          const orig = e.target.value;
+                          setComprasOrigenFlete(orig);
+                          const match = FLETES_NACIONALES_COMPRAS.find(r => r.o === orig && r.d === comprasDestinoFlete);
+                          if (match) setFleteNac(match.precio.toString());
+                          else setFleteNac("0");
+                        }}
                         className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none focus:border-white transition-colors appearance-none truncate"
                       >
                         <option value="">— Origen —</option>
@@ -857,18 +863,10 @@ function App() {
                       <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Destino</label>
                       <select
                         value={comprasDestinoFlete}
-                        onChange={e => {
-                          const dest = e.target.value;
-                          setComprasDestinoFlete(dest);
-                          const match = FLETES_NACIONALES_COMPRAS.find(r => r.o === comprasOrigenFlete && r.d === dest);
-                          if (match) setFleteNac(match.precio.toString());
-                          else setFleteNac("0");
-                        }}
-                        disabled={!comprasOrigenFlete}
-                        className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none focus:border-white transition-colors appearance-none truncate disabled:opacity-40"
+                        disabled
+                        className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none appearance-none truncate disabled:opacity-70"
                       >
-                        <option value="">— Destino —</option>
-                        {comprasOrigenFlete && FLETES_NACIONALES_COMPRAS.filter(r => r.o === comprasOrigenFlete).map(r => r.d).sort().map(d => <option key={d} value={d}>{d}</option>)}
+                        <option value={comprasDestinoFlete}>{comprasDestinoFlete}</option>
                       </select>
                     </div>
                   </div>
@@ -1002,11 +1000,10 @@ function App() {
                             if (match) setFleteNac(match.precio.toString());
                             else setFleteNac("0");
                           }}
-                          disabled={!comprasOrigenFlete}
-                          className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none focus:border-white transition-colors appearance-none truncate disabled:opacity-40"
+                          className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none focus:border-white transition-colors appearance-none truncate"
                         >
                           <option value="">— Destino —</option>
-                          {comprasOrigenFlete && FLETES_NACIONALES_COMPRAS.filter(r => r.o === comprasOrigenFlete).map(r => r.d).sort().map(d => <option key={d} value={d}>{d}</option>)}
+                          {[...new Set(FLETES_NACIONALES_COMPRAS.map(r => r.d))].sort().map(d => <option key={d} value={d}>{d}</option>)}
                         </select>
                       </div>
                     </div>
