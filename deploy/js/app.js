@@ -22,6 +22,7 @@ function App() {
   const [porcentajeFijacion, setPorcentajeFijacion] = useState("100");
   const [fixPrice, setFixPrice] = useState("2550.00");
   const [tcHoy, setTcHoy] = useState("");
+  
   const [diasCobro, setDiasCobro] = useState("15");
 
   // Fletes inician en 0 para mantener todo limpio
@@ -684,9 +685,6 @@ function App() {
           >
             Compras
           </button>
-
-        </div>
-
         <div className="p-6 space-y-5 relative z-10">
 
           {/* Mode Toggle: Back to Back / Simular */}
@@ -1568,9 +1566,7 @@ function App() {
             </div>
           )}
 
-        </div>
-
-      </div>
+        </div>      </div>
     </div>
   );
 }

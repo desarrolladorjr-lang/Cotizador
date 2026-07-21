@@ -198,3 +198,46 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+function sincronizarTitulosGoogleSheets() {
+  var spreadsheet = SpreadsheetApp.openById('12-gjHHdqqAVsLsEE3I94MxpE9POpRVTBfMorLByrn-A');
+  
+  var titulosInventarios = [
+    "Fecha", "Usuario", "Proveedor", "Cargas", "Material", "Flete Nacional", 
+    "Precio Compra MXN", "Notas"
+  ];
+  
+  var titulosCompras = [
+    "Fecha", "Usuario", "Proveedor", "Cargas", "Material", "Origen Flete", 
+    "Destino Flete", "Origen Embarque", "Flete Nacional", "Fix Price", 
+    "Porcentaje Fijación", "Precio Venta", "Precio Tope Compra", 
+    "Para Inventarios", "Intención Venta", "Intención Compra", 
+    "Precio Compra MXN", "Notas"
+  ];
+  
+  var titulosGenerales = [
+    "Fecha", "Usuario", "Cliente", "Proveedor", "Cargas", "Material", 
+    "Destino", "Porcentaje Fijación", "Fix Price", "Precio Venta", "TC Hoy", 
+    "TC Seguro", "Flete Nacional", "Cruce Int", "Precio Tope Compra", 
+    "PP Prov", "Status", "Utilidad Neta", "Tipo Compra", "Notas", 
+    "Contrato", "Para Inventarios", "Intención Venta", "Intención Compra"
+  ];
+  
+  function setHeaders(sheetName, headers) {
+    var sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet(sheetName);
+    }
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+    sheet.setFrozenRows(1); // Fija la primera fila para que los encabezados no se muevan
+  }
+  
+  setHeaders('Inventarios', titulosInventarios);
+  setHeaders('Compras', titulosCompras);
+  setHeaders('Marítimo', titulosGenerales);
+  setHeaders('Nacional', titulosGenerales);
+  setHeaders('Terrestre', titulosGenerales);
+  
+  Logger.log("Títulos sincronizados correctamente en todas las hojas.");
+}
