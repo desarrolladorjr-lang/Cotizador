@@ -32,7 +32,10 @@ function doPost(e) {
         data.material,
         data.fleteNac,
         data.precioCompraMxn,
-        data.notas
+        data.notas,
+        data.embalaje || '',
+        data.negociacion || '',
+        data.modalidad
       ];
     } else if (data.modalidad === 'Compras') {
       row = [
@@ -45,15 +48,19 @@ function doPost(e) {
         data.destinoFlete,
         data.origenEmbarque || '',
         data.fleteNac,
-        data.fixPrice,
-        data.porcentajeFijacion,
-        data.precioVenta,
-        data.precioTopeCompra,
+        '', // fixPrice
+        '', // porcentajeFijacion
+        '', // precioVenta
+        '', // precioTopeCompra
         data.paraInventarios ? 'Sí' : 'No',
         data.intencionVenta ? 'Sí' : 'No',
         data.intencionCompra ? 'Sí' : 'No',
         data.precioCompraMxn || '',
-        data.notas
+        data.notas,
+        data.embalaje || '',
+        data.negociacion || '',
+        data.modalidad,
+        data.tipoCompra
       ];
     } else {
       row = [
@@ -77,10 +84,13 @@ function doPost(e) {
         data.utilidadNeta,
         data.tipoCompra,
         data.notas,
+        data.embalaje || '',
+        data.negociacion || '',
         data.contrato || '',
         data.paraInventarios ? 'Sí' : 'No',
         data.intencionVenta ? 'Sí' : 'No',
-        data.intencionCompra ? 'Sí' : 'No'
+        data.intencionCompra ? 'Sí' : 'No',
+        data.modalidad
       ];
     }
 
@@ -203,24 +213,25 @@ function sincronizarTitulosGoogleSheets() {
   var spreadsheet = SpreadsheetApp.openById('12-gjHHdqqAVsLsEE3I94MxpE9POpRVTBfMorLByrn-A');
   
   var titulosInventarios = [
-    "Fecha", "Usuario", "Proveedor", "Cargas", "Material", "Flete Nacional", 
-    "Precio Compra MXN", "Notas"
+    "Fecha", "Usuario", "Proveedor", "Cargas", "Material", "Flete Nacional",
+    "Precio Compra MXN", "Notas", "Embalaje", "Negociación", "Segmento"
   ];
-  
+
   var titulosCompras = [
-    "Fecha", "Usuario", "Proveedor", "Cargas", "Material", "Origen Flete", 
-    "Destino Flete", "Origen Embarque", "Flete Nacional", "Fix Price", 
-    "Porcentaje Fijación", "Precio Venta", "Precio Tope Compra", 
-    "Para Inventarios", "Intención Venta", "Intención Compra", 
-    "Precio Compra MXN", "Notas"
+    "Fecha", "Usuario", "Proveedor", "Cargas", "Material", "Origen Flete",
+    "Destino Flete", "Origen Embarque", "Flete Nacional", "Fix Price",
+    "Porcentaje Fijación", "Precio Venta", "Precio Tope Compra",
+    "Para Inventarios", "Intención Venta", "Intención Compra",
+    "Precio Compra MXN", "Notas", "Embalaje", "Negociación", "Segmento", "Tipo Compra"
   ];
-  
+
   var titulosGenerales = [
-    "Fecha", "Usuario", "Cliente", "Proveedor", "Cargas", "Material", 
-    "Destino", "Porcentaje Fijación", "Fix Price", "Precio Venta", "TC Hoy", 
-    "TC Seguro", "Flete Nacional", "Cruce Int", "Precio Tope Compra", 
-    "PP Prov", "Status", "Utilidad Neta", "Tipo Compra", "Notas", 
-    "Contrato", "Para Inventarios", "Intención Venta", "Intención Compra"
+    "Fecha", "Usuario", "Cliente", "Proveedor", "Cargas", "Material",
+    "Destino", "Porcentaje Fijación", "Fix Price", "Precio Venta", "TC Hoy",
+    "TC Seguro", "Flete Nacional", "Cruce Int", "Precio Tope Compra",
+    "PP Prov", "Status", "Utilidad Neta", "Tipo Compra", "Notas",
+    "Embalaje", "Negociación",
+    "Contrato", "Para Inventarios", "Intención Venta", "Intención Compra", "Segmento"
   ];
   
   function setHeaders(sheetName, headers) {

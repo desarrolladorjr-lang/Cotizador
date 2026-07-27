@@ -41,6 +41,8 @@ function App() {
   const [rutaIntSelect, setRutaIntSelect] = useState('');
 
   const [notas, setNotas] = useState('');
+  const [embalaje, setEmbalaje] = useState('');
+  const [negociacion, setNegociacion] = useState('');
 
   // Compra Directa state
   const [compraDirecta, setCompraDirecta] = useState(false);
@@ -559,6 +561,8 @@ function App() {
         utilidadNeta: Number(utilidadNeta.toFixed(2)),
         tipoCompra: compraDirecta ? (modoNuevoSurtido ? 'Back to Back (Nuevo)' : 'Back to Back') : activeTab === 'compras' ? 'Compra Mercado' : 'Compra Inventarios',
         notas,
+        embalaje,
+        negociacion,
         contrato: compraDirecta ? contrato : '',
         paraInventarios: activeTab === 'compras' ? comprasTipo === 'inventario' : false,
         intencionVenta: activeTab === 'compras' ? comprasTipo === 'intencionVenta' : false,
@@ -685,6 +689,9 @@ function App() {
           >
             Compras
           </button>
+
+        </div>
+
         <div className="p-6 space-y-5 relative z-10">
 
           {/* Mode Toggle: Back to Back / Simular */}
@@ -802,6 +809,23 @@ function App() {
                     <div className="text-white text-[11px] font-black leading-tight">{visualKg.toLocaleString()} KG</div>
                     <div className="text-gray-500 text-[9px] font-bold leading-tight">{Math.round(visualLb).toLocaleString()} LB</div>
                   </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Embalaje</label>
+                  <select value={embalaje} onChange={e => setEmbalaje(e.target.value)} className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-xs outline-none focus:border-white transition-colors appearance-none">
+                    <option value="">— Embalaje —</option>
+                    {["PACAS", "JUMBOS", "GAYLORD"].map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Negociación</label>
+                  <select value={negociacion} onChange={e => setNegociacion(e.target.value)} className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-xs outline-none focus:border-white transition-colors appearance-none">
+                    <option value="">— Negociación —</option>
+                    {["ENTREGA", "LAREDO", "MTY", "RECOLECCION", "N/A"].map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
                 </div>
               </div>
 
@@ -1429,6 +1453,22 @@ function App() {
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Embalaje</label>
+                <select value={embalaje} onChange={e => setEmbalaje(e.target.value)} className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-xs outline-none focus:border-white transition-colors appearance-none">
+                  <option value="">— Embalaje —</option>
+                  {["PACAS", "JUMBOS", "GAYLORD"].map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Negociación</label>
+                <select value={negociacion} onChange={e => setNegociacion(e.target.value)} className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-xs outline-none focus:border-white transition-colors appearance-none">
+                  <option value="">— Negociación —</option>
+                  {["ENTREGA", "LAREDO", "MTY", "RECOLECCION", "N/A"].map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
               </div>
             </div>
           </div>
