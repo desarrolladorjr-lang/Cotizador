@@ -131,7 +131,7 @@ Reglas de presentación:
 - Totales (`Total AA`, `Arrastre+Despacho`, `Costo Final Tarifario`) en negritas y color `accent`. Conceptos en gris.
 - Miles con `toLocaleString`; MXN sin decimales, OF USD con los decimales que traiga la fila (hay tarifas como 2908.8).
 - El encabezado `DESPACHO — <POL>` usa el POL real de la fila, no un literal.
-- Si `arr === 0` (Altamira / Ensenada): se omite el renglón Arrastre y el total pasa a llamarse `Total Despacho`.
+- Si `arr === 0` (Altamira / Ensenada): se omiten los renglones `Arrastre` y `Arrastre+Despacho`. `Total AA` queda como el total de despacho — es el mismo número (9,360), y repetirlo en dos renglones seguidos sería ruido.
 - Estilo: mismo lenguaje visual que el resto (fondo negro, `rounded-xl`, borde gris, tipografía `text-[10px]`/`text-xs` mono para cifras).
 
 Puntos de render — los dos bloques que ya tienen los selects en cascada, mismo componente:
