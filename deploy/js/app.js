@@ -82,7 +82,7 @@ function App() {
 
   // Compras — selectors de ruta flete nacional (Hoja 10)
   const [comprasOrigenFlete, setComprasOrigenFlete] = useState('');
-  const [comprasDestinoFlete, setComprasDestinoFlete] = useState('');
+  const [comprasDestinoFlete, setComprasDestinoFlete] = useState('GRAL. ESCOBÉDO, NL');
 
   // Maritime ocean freight selectors
   const [maritimoProveedor, setMaritimoProveedor] = useState('');
@@ -540,7 +540,7 @@ function App() {
         modalidad: activeTab === 'terrestre' ? 'Terrestre' : activeTab === 'maritimo' ? 'Marítimo' : activeTab === 'compras' ? 'Compras' : 'Nacional',
         cliente: activeTab === 'compras' ? (comprasTipo === 'intencionVenta' ? cliente : '') : cliente,
         proveedor: activeTab === 'compras'
-          ? comprasProveedores.map(r => `${r.proveedor}: ${r.cargas}${r.paraInventario ? ' [INV]' : ''}${r.intencionVenta ? ' [IV]' : ''}${r.intencionCompra ? ' [IC]' : ''}`).join(', ')
+          ? comprasProveedores.map(r => `${r.proveedor}${r.paraInventario ? ' [INV]' : ''}${r.intencionVenta ? ' [IV]' : ''}${r.intencionCompra ? ' [IC]' : ''}`).join(', ')
           : proveedor,
         cargas: activeTab === 'compras'
           ? comprasProveedores.reduce((sum, r) => sum + (Number(r.cargas) || 0), 0)
@@ -824,7 +824,7 @@ function App() {
                   <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Negociación</label>
                   <select value={negociacion} onChange={e => setNegociacion(e.target.value)} className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-xs outline-none focus:border-white transition-colors appearance-none">
                     <option value="">— Negociación —</option>
-                    {["ENTREGA", "LAREDO", "MTY", "RECOLECCION", "N/A"].map(o => <option key={o} value={o}>{o}</option>)}
+                    {["RECOLECCION DIRECTA", "RECOLECCION BMTY", "DIRECTO ENTREGA", "BMTY ENTREGA", "LAREDO ENTREGA"].map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
               </div>
@@ -885,10 +885,17 @@ function App() {
                       <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Destino</label>
                       <select
                         value={comprasDestinoFlete}
-                        disabled
-                        className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none appearance-none truncate disabled:opacity-70"
+                        onChange={e => {
+                          const dest = e.target.value;
+                          setComprasDestinoFlete(dest);
+                          const match = FLETES_NACIONALES_COMPRAS.find(r => r.o === comprasOrigenFlete && r.d === dest);
+                          if (match) setFleteNac(match.precio.toString());
+                          else setFleteNac("0");
+                        }}
+                        className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none focus:border-white transition-colors appearance-none truncate"
                       >
-                        <option value={comprasDestinoFlete}>{comprasDestinoFlete}</option>
+                        <option value="">— Destino —</option>
+                        {[...new Set(FLETES_NACIONALES_COMPRAS.map(r => r.d))].sort().map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </div>
                   </div>
@@ -1467,7 +1474,7 @@ function App() {
                 <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Negociación</label>
                 <select value={negociacion} onChange={e => setNegociacion(e.target.value)} className="w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-xs outline-none focus:border-white transition-colors appearance-none">
                   <option value="">— Negociación —</option>
-                  {["ENTREGA", "LAREDO", "MTY", "RECOLECCION", "N/A"].map(o => <option key={o} value={o}>{o}</option>)}
+                  {["RECOLECCION DIRECTA", "RECOLECCION BMTY", "DIRECTO ENTREGA", "BMTY ENTREGA", "LAREDO ENTREGA"].map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
             </div>

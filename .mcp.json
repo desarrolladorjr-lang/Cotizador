@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "graphify": {
+      "command": "C:\\Users\\jesus\\AppData\\Local\\pipx\\pipx\\venvs\\graphifyy\\Scripts\\graphify-mcp.exe",
+      "args": ["graphify-out/graph.json"]
+    }
+  }
+}

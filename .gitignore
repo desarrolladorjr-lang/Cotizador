@@ -18,3 +18,11 @@ Thumbs.db
 
 .vercel
 .env*
+
+# Herramienta y salida de graphify (generadas, ~80 MB)
+graphify/
+graphify-out/
+
+# Estado local de Claude Code
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
