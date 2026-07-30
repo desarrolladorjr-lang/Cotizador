@@ -4,7 +4,7 @@ const { useState, useEffect } = React;
 const Renglon = ({ label, valor, total, sangria, accent }) => (
   <div className={"flex justify-between items-baseline " + (sangria ? 'pl-2' : '')}>
     <span className={total ? 'text-[10px] font-black uppercase tracking-wider' : 'text-[10px] text-gray-400 font-bold'} style={total ? { color: accent } : undefined}>{label}</span>
-    <span className={"font-mono " + (total ? 'text-xs font-black' : 'text-[11px] text-gray-200 font-bold')} style={total ? { color: accent } : undefined}>{valor}</span>
+    <span className={"font-mono whitespace-nowrap pl-2 " + (total ? 'text-xs font-black' : 'text-[11px] text-gray-200 font-bold')} style={total ? { color: accent } : undefined}>{valor}</span>
   </div>
 );
 
@@ -23,7 +23,6 @@ function DesgloseMaritimo({ row, tc, accent }) {
     <div className="bg-black rounded-xl border border-gray-700 p-3 space-y-1 mt-2">
       <Renglon label="Ocean Freight" valor={'USD ' + row.of.toLocaleString('es-MX')} accent={accent} />
       <Renglon label="T.C. Banco" valor={numTc > 0 ? numTc.toFixed(2) : '—'} accent={accent} />
-      <Renglon label="OF en MXN" valor={mxn(ofMxn)} accent={accent} />
 
       <div className="h-px bg-gray-700 my-1.5"></div>
       <div className="text-[9px] font-black uppercase tracking-wider text-gray-500">Despacho — {row.pol}</div>
@@ -38,8 +37,8 @@ function DesgloseMaritimo({ row, tc, accent }) {
       {conArrastre && <Renglon label="Arrastre + Despacho" valor={mxn(d.total)} total accent={accent} />}
 
       <div className="h-px bg-gray-700 my-1.5"></div>
-      <Renglon label="Costo Final Tarifario" valor={mxn(costoFinal)} total accent={accent} />
-      <div className="text-[8px] text-gray-600 font-bold leading-tight pt-0.5">T.C. banco — el motor de costo usa T.C. Seguro</div>
+      <Renglon label="Costo Final" valor={mxn(costoFinal)} total accent={accent} />
+      <div className="text-[8px] text-gray-600 font-bold leading-tight pt-0.5">Tarifario a T.C. banco — el motor de costo usa T.C. Seguro</div>
     </div>
   );
 }
