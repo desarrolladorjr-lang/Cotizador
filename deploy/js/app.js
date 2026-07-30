@@ -321,20 +321,24 @@ function App() {
     const match = hasTipo ? rows.find(r => r.tipo === maritimoTipo) : rows[0];
     if (match) {
       const desp = calcDespacho(match.pol);
+      const numTc = Number(modoSimulador ? simTcHoy : tcHoy) || 0;
+      // Todo en USD: ocean freight + (arrastre + despacho) convertido del MXN del
+      // tarifario. Por eso aduanaMex queda en 0: el despacho ya va dentro del cruce.
+      const totalUsd = numTc > 0 ? match.of + (desp.total / numTc) : match.of;
       setMaritimoRow(match);
       if (modoSimulador) {
-        setSimCruceInt(match.of.toString());
-        setSimAduanaMex(desp.total.toString());
+        setSimCruceInt(totalUsd.toFixed(2));
+        setSimAduanaMex("0");
         setSimRutaIntSelect('');
       } else {
-        setCruceInt(match.of.toString());
-        setAduanaMex(desp.total.toString());
+        setCruceInt(totalUsd.toFixed(2));
+        setAduanaMex("0");
         setRutaIntSelect('');
       }
     } else {
       setMaritimoRow(null);
     }
-  }, [maritimoProveedor, maritimoOrigen, maritimoDestino, maritimoEquipo, maritimoTipo, modoSimulador]);
+  }, [maritimoProveedor, maritimoOrigen, maritimoDestino, maritimoEquipo, maritimoTipo, modoSimulador, tcHoy, simTcHoy]);
 
   useEffect(() => {
     if (!modoSimulador) return;
