@@ -1,5 +1,49 @@
 const { useState, useEffect } = React;
 
+// Desglose de solo lectura del tarifario marítimo. Replica las columnas del xlsx.
+function DesgloseMaritimo({ row, tc, accent }) {
+  if (!row) return null;
+
+  const d = calcDespacho(row.pol);
+  const numTc = Number(tc) || 0;
+  const ofMxn = numTc > 0 ? row.of * numTc : null;
+  const costoFinal = ofMxn !== null ? ofMxn + d.total : null;
+
+  const mxn = n => n === null ? '—' : '$ ' + Math.round(n).toLocaleString('es-MX');
+  const conArrastre = d.arr > 0;
+
+  const Renglon = ({ label, valor, total, sangria }) => (
+    <div className={"flex justify-between items-baseline " + (sangria ? 'pl-2' : '')}>
+      <span className={total ? 'text-[10px] font-black uppercase tracking-wider' : 'text-[10px] text-gray-400 font-bold'} style={total ? { color: accent } : undefined}>{label}</span>
+      <span className={"font-mono " + (total ? 'text-xs font-black' : 'text-[11px] text-gray-200 font-bold')} style={total ? { color: accent } : undefined}>{valor}</span>
+    </div>
+  );
+
+  return (
+    <div className="bg-black rounded-xl border border-gray-700 p-3 space-y-1 mt-2">
+      <Renglon label="Ocean Freight" valor={'USD ' + row.of.toLocaleString('es-MX')} />
+      <Renglon label="T.C. Banco" valor={numTc > 0 ? numTc.toFixed(2) : '—'} />
+      <Renglon label="OF en MXN" valor={mxn(ofMxn)} />
+
+      <div className="h-px bg-gray-700 my-1.5"></div>
+      <div className="text-[9px] font-black uppercase tracking-wider text-gray-500">Despacho — {row.pol}</div>
+
+      <Renglon label="Pedimento"     valor={mxn(d.ped)}  sangria />
+      <Renglon label="Maniobras"     valor={mxn(d.man)}  sangria />
+      <Renglon label="Honorarios"    valor={mxn(d.hon)}  sangria />
+      <Renglon label="Validación"    valor={mxn(d.val)}  sangria />
+      <Renglon label="Servicio COVE" valor={mxn(d.cove)} sangria />
+      <Renglon label="Total AA"      valor={mxn(d.totalAA)} total />
+      {conArrastre && <Renglon label="Arrastre" valor={mxn(d.arr)} sangria />}
+      {conArrastre && <Renglon label="Arrastre + Despacho" valor={mxn(d.total)} total />}
+
+      <div className="h-px bg-gray-700 my-1.5"></div>
+      <Renglon label="Costo Final Tarifario" valor={mxn(costoFinal)} total />
+      <div className="text-[8px] text-gray-600 font-bold leading-tight pt-0.5">T.C. banco — el motor de costo usa T.C. Seguro</div>
+    </div>
+  );
+}
+
 function App() {
   const [usuario, setUsuario] = useState(() => {
     const saved = localStorage.getItem('usuarioCotizador');
@@ -1092,6 +1136,7 @@ function App() {
                           </>
                         );
                       })()}
+                      <DesgloseMaritimo row={maritimoRow} tc={tcHoy} accent="#ff6600" />
                     </div>
                   )}
                   {comprasTipo === 'intencionVenta' && intencionVentaModalidad === 'terrestre' && (
@@ -1390,6 +1435,7 @@ function App() {
                       </>
                     );
                   })()}
+                  <DesgloseMaritimo row={maritimoRow} tc={modoSimulador ? simTcHoy : tcHoy} accent={modoSimulador ? '#3b82f6' : '#ff6600'} />
                 </div>
               ) : (
                 <div>
