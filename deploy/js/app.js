@@ -13,11 +13,9 @@ function DesgloseMaritimo({ row, tc, accent }) {
 
   const d = calcDespacho(row.pol);
   const numTc = Number(tc) || 0;
-  const ofMxn = numTc > 0 ? row.of * numTc : null;
-  const costoFinal = ofMxn !== null ? ofMxn + d.total : null;
 
-  const mxn = n => n == null ? '—' : '$ ' + Math.round(n).toLocaleString('es-MX');
-  const conArrastre = d.arr > 0;
+  // El tarifario captura el despacho en MXN; aqui se muestra en USD al T.C. banco.
+  const usd = n => numTc > 0 ? 'USD ' + Math.round(n / numTc).toLocaleString('es-MX') : '—';
 
   return (
     <div className="bg-black rounded-xl border border-gray-700 p-3 space-y-1 mt-2">
@@ -27,18 +25,17 @@ function DesgloseMaritimo({ row, tc, accent }) {
       <div className="h-px bg-gray-700 my-1.5"></div>
       <div className="text-[9px] font-black uppercase tracking-wider text-gray-500">Despacho — {row.pol}</div>
 
-      <Renglon label="Pedimento"     valor={mxn(d.ped)}  sangria accent={accent} />
-      <Renglon label="Maniobras"     valor={mxn(d.man)}  sangria accent={accent} />
-      <Renglon label="Honorarios"    valor={mxn(d.hon)}  sangria accent={accent} />
-      <Renglon label="Validación"    valor={mxn(d.val)}  sangria accent={accent} />
-      <Renglon label="Servicio COVE" valor={mxn(d.cove)} sangria accent={accent} />
-      <Renglon label="Total AA"      valor={mxn(d.totalAA)} total accent={accent} />
-      {conArrastre && <Renglon label="Arrastre" valor={mxn(d.arr)} sangria accent={accent} />}
-      {conArrastre && <Renglon label="Arrastre + Despacho" valor={mxn(d.total)} total accent={accent} />}
+      <Renglon label="Pedimento"     valor={usd(d.ped)}  sangria accent={accent} />
+      <Renglon label="Maniobras"     valor={usd(d.man)}  sangria accent={accent} />
+      <Renglon label="Honorarios"    valor={usd(d.hon)}  sangria accent={accent} />
+      <Renglon label="Validación"    valor={usd(d.val)}  sangria accent={accent} />
+      <Renglon label="Servicio COVE" valor={usd(d.cove)} sangria accent={accent} />
+      <Renglon label="Total AA"      valor={usd(d.totalAA)} total accent={accent} />
+      <Renglon label="Arrastre"      valor={usd(d.arr)}  sangria accent={accent} />
 
       <div className="h-px bg-gray-700 my-1.5"></div>
-      <Renglon label="Costo Final" valor={mxn(costoFinal)} total accent={accent} />
-      <div className="text-[8px] text-gray-600 font-bold leading-tight pt-0.5">Tarifario a T.C. banco — el motor de costo usa T.C. Seguro</div>
+      <Renglon label="Arrastre + Despacho" valor={usd(d.total)} total accent={accent} />
+      <div className="text-[8px] text-gray-600 font-bold leading-tight pt-0.5">Despacho convertido de MXN a T.C. banco</div>
     </div>
   );
 }
