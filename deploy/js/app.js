@@ -1,10 +1,12 @@
 const { useState, useEffect } = React;
 
 // Desglose de solo lectura del tarifario marítimo. Replica las columnas del xlsx.
-const Renglon = ({ label, valor, total, sangria, accent }) => (
-  <div className={"flex justify-between items-baseline " + (sangria ? 'pl-2' : '')}>
-    <span className={total ? 'text-[10px] font-black uppercase tracking-wider' : 'text-[10px] text-gray-400 font-bold'} style={total ? { color: accent } : undefined}>{label}</span>
-    <span className={"font-mono whitespace-nowrap pl-2 " + (total ? 'text-xs font-black' : 'text-[11px] text-gray-200 font-bold')} style={total ? { color: accent } : undefined}>{valor}</span>
+// Celda de concepto: etiqueta arriba, importe abajo. Se acomoda en rejilla horizontal.
+const Celda = ({ label, valor, accent, destacado }) => (
+  <div className={"rounded-lg px-2 py-1.5 border " + (destacado ? 'bg-gray-900' : 'bg-black border-gray-800')}
+       style={destacado ? { borderColor: accent } : undefined}>
+    <div className="text-[8px] font-black uppercase tracking-wider leading-tight" style={{ color: destacado ? accent : '#9ca3af' }}>{label}</div>
+    <div className="font-mono font-black whitespace-nowrap text-[11px]" style={{ color: destacado ? accent : '#e5e7eb' }}>{valor}</div>
   </div>
 );
 
@@ -18,24 +20,30 @@ function DesgloseMaritimo({ row, tc, accent }) {
   const usd = n => numTc > 0 ? 'USD ' + Math.round(n / numTc).toLocaleString('es-MX') : '—';
 
   return (
-    <div className="bg-black rounded-xl border border-gray-700 p-3 space-y-1 mt-2">
-      <Renglon label="Ocean Freight" valor={'USD ' + row.of.toLocaleString('es-MX')} accent={accent} />
-      <Renglon label="T.C. Banco" valor={numTc > 0 ? numTc.toFixed(2) : '—'} accent={accent} />
+    <div className="bg-black rounded-xl border border-gray-700 p-3 mt-2">
+      <div className="flex items-baseline justify-between gap-2 mb-2">
+        <span className="text-[9px] font-black uppercase tracking-wider text-gray-500">Desglose — {row.pol}</span>
+        <span className="text-[9px] font-bold text-gray-600 font-mono">T.C. {numTc > 0 ? numTc.toFixed(2) : '—'}</span>
+      </div>
 
-      <div className="h-px bg-gray-700 my-1.5"></div>
-      <div className="text-[9px] font-black uppercase tracking-wider text-gray-500">Despacho — {row.pol}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+        <Celda label="Ocean Freight" valor={'USD ' + row.of.toLocaleString('es-MX')} accent={accent} destacado />
+        <Celda label="Pedimento"     valor={usd(d.ped)}  accent={accent} />
+        <Celda label="Maniobras"     valor={usd(d.man)}  accent={accent} />
+        <Celda label="Honorarios"    valor={usd(d.hon)}  accent={accent} />
+        <Celda label="Validación"    valor={usd(d.val)}  accent={accent} />
+        <Celda label="Servicio COVE" valor={usd(d.cove)} accent={accent} />
+      </div>
 
-      <Renglon label="Pedimento"     valor={usd(d.ped)}  sangria accent={accent} />
-      <Renglon label="Maniobras"     valor={usd(d.man)}  sangria accent={accent} />
-      <Renglon label="Honorarios"    valor={usd(d.hon)}  sangria accent={accent} />
-      <Renglon label="Validación"    valor={usd(d.val)}  sangria accent={accent} />
-      <Renglon label="Servicio COVE" valor={usd(d.cove)} sangria accent={accent} />
-      <Renglon label="Total AA"      valor={usd(d.totalAA)} total accent={accent} />
-      <Renglon label="Arrastre"      valor={usd(d.arr)}  sangria accent={accent} />
+      <div className="h-px bg-gray-700 my-2"></div>
 
-      <div className="h-px bg-gray-700 my-1.5"></div>
-      <Renglon label="Arrastre + Despacho" valor={usd(d.total)} total accent={accent} />
-      <div className="text-[8px] text-gray-600 font-bold leading-tight pt-0.5">Despacho convertido de MXN a T.C. banco</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+        <Celda label="Total AA"  valor={usd(d.totalAA)} accent={accent} />
+        <Celda label="Arrastre"  valor={usd(d.arr)}     accent={accent} />
+        <Celda label="Arrastre + Despacho" valor={usd(d.total)} accent={accent} destacado />
+      </div>
+
+      <div className="text-[8px] text-gray-600 font-bold leading-tight pt-1.5">Despacho convertido de MXN a T.C. banco</div>
     </div>
   );
 }
@@ -339,6 +347,22 @@ function App() {
       setMaritimoRow(null);
     }
   }, [maritimoProveedor, maritimoOrigen, maritimoDestino, maritimoEquipo, maritimoTipo, modoSimulador, tcHoy, simTcHoy]);
+
+  // Proveedor sin tarifario: se captura el ocean freight a mano, así que se limpia
+  // el cruce anterior y se devuelve el despacho a Aduana MX (ya no viene incluido).
+  useEffect(() => {
+    if (!maritimoProveedor) return;
+    if (TARIFARIO_DATA.some(r => r.p === maritimoProveedor)) return;
+    if (modoSimulador) {
+      setSimCruceInt("0");
+      setSimAduanaMex("2308");
+      setSimRutaIntSelect('');
+    } else {
+      setCruceInt("0");
+      setAduanaMex("2308");
+      setRutaIntSelect('');
+    }
+  }, [maritimoProveedor, modoSimulador]);
 
   useEffect(() => {
     if (!modoSimulador) return;
@@ -1097,13 +1121,14 @@ function App() {
                     <div className="space-y-1.5">
                       <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider">Ocean Freight</label>
                       {(() => {
-                        const mProv = [...new Set(TARIFARIO_DATA.map(r => r.p))].sort();
+                        const mProv = [...new Set([...TARIFARIO_DATA.map(r => r.p), ...TARIFARIO_PROVEEDORES_EXTRA])].sort();
                         const mOrig = maritimoProveedor ? [...new Set(TARIFARIO_DATA.filter(r => r.p === maritimoProveedor).map(r => r.o))].sort() : [];
                         const mDest = maritimoOrigen ? [...new Set(TARIFARIO_DATA.filter(r => r.p === maritimoProveedor && r.o === maritimoOrigen).map(r => r.pod))].sort() : [];
                         const mEq   = maritimoDestino ? [...new Set(TARIFARIO_DATA.filter(r => r.p === maritimoProveedor && r.o === maritimoOrigen && r.pod === maritimoDestino).map(r => r.eq))].sort() : [];
                         const mRows = maritimoEquipo ? TARIFARIO_DATA.filter(r => r.p === maritimoProveedor && r.o === maritimoOrigen && r.pod === maritimoDestino && r.eq === maritimoEquipo) : [];
                         const mTipos = [...new Set(mRows.filter(r => r.tipo !== null).map(r => r.tipo))].sort();
                         const mHasTipo = mTipos.length > 0;
+                        const mSinTarifas = !!maritimoProveedor && mOrig.length === 0;
                         const selCls = "w-full bg-black border border-gray-700 rounded-lg p-1.5 text-white font-bold text-[10px] outline-none truncate focus:border-white appearance-none";
                         return (
                           <>
@@ -1111,7 +1136,16 @@ function App() {
                               <option value="">— Proveedor —</option>
                               {mProv.map(p => <option key={p} value={p}>{p}</option>)}
                             </select>
-                            {maritimoProveedor && (
+                            {mSinTarifas && (
+                              <>
+                                <p className="text-[9px] text-gray-500 leading-tight">Sin tarifario. Captura el ocean freight manual (USD); el despacho va en Aduana MX.</p>
+                                <div className="relative">
+                                  <span className="absolute left-2 top-1.5 font-bold text-[10px]" style={{ color: '#ff6600' }}>$</span>
+                                  <input type="number" value={cruceInt} onChange={e => { setCruceInt(e.target.value); setRutaIntSelect(''); }} className="w-full bg-black border border-gray-700 rounded-lg p-1.5 pl-5 text-white font-bold text-[10px] outline-none focus:border-white" />
+                                </div>
+                              </>
+                            )}
+                            {!mSinTarifas && maritimoProveedor && (
                               <select value={maritimoOrigen} onChange={e => { setMaritimoOrigen(e.target.value); setMaritimoDestino(''); setMaritimoEquipo(''); setMaritimoTipo(''); }} className={selCls}>
                                 <option value="">— Origen —</option>
                                 {mOrig.map(o => <option key={o} value={o}>{o}</option>)}
@@ -1396,13 +1430,14 @@ function App() {
                 <div className="space-y-1.5">
                   <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider">Ocean Freight</label>
                   {(() => {
-                    const mProv = [...new Set(TARIFARIO_DATA.map(r => r.p))].sort();
+                    const mProv = [...new Set([...TARIFARIO_DATA.map(r => r.p), ...TARIFARIO_PROVEEDORES_EXTRA])].sort();
                     const mOrig = maritimoProveedor ? [...new Set(TARIFARIO_DATA.filter(r => r.p === maritimoProveedor).map(r => r.o))].sort() : [];
                     const mDest = maritimoOrigen ? [...new Set(TARIFARIO_DATA.filter(r => r.p === maritimoProveedor && r.o === maritimoOrigen).map(r => r.pod))].sort() : [];
                     const mEq   = maritimoDestino ? [...new Set(TARIFARIO_DATA.filter(r => r.p === maritimoProveedor && r.o === maritimoOrigen && r.pod === maritimoDestino).map(r => r.eq))].sort() : [];
                     const mRows = maritimoEquipo ? TARIFARIO_DATA.filter(r => r.p === maritimoProveedor && r.o === maritimoOrigen && r.pod === maritimoDestino && r.eq === maritimoEquipo) : [];
                     const mTipos = [...new Set(mRows.filter(r => r.tipo !== null).map(r => r.tipo))].sort();
                     const mHasTipo = mTipos.length > 0;
+                    const mSinTarifas = !!maritimoProveedor && mOrig.length === 0;
                     const selCls = "w-full bg-black border border-gray-700 rounded-lg p-1.5 text-white font-bold text-[10px] outline-none truncate focus:border-white appearance-none";
                     return (
                       <>
@@ -1410,7 +1445,10 @@ function App() {
                           <option value="">— Proveedor —</option>
                           {mProv.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
-                        {maritimoProveedor && (
+                        {mSinTarifas && (
+                          <p className="text-[9px] text-gray-500 leading-tight">Sin tarifario. Captura el ocean freight manual (USD) abajo; el despacho va en Aduana MX.</p>
+                        )}
+                        {!mSinTarifas && maritimoProveedor && (
                           <select value={maritimoOrigen} onChange={e => { setMaritimoOrigen(e.target.value); setMaritimoDestino(''); setMaritimoEquipo(''); setMaritimoTipo(''); }} className={selCls}>
                             <option value="">— Origen —</option>
                             {mOrig.map(o => <option key={o} value={o}>{o}</option>)}
@@ -1437,7 +1475,6 @@ function App() {
                       </>
                     );
                   })()}
-                  <DesgloseMaritimo row={maritimoRow} tc={modoSimulador ? simTcHoy : tcHoy} accent={modoSimulador ? '#3b82f6' : '#ff6600'} />
                 </div>
               ) : (
                 <div>
@@ -1467,11 +1504,15 @@ function App() {
               )}
               <div className="relative">
                 <span className="absolute left-2 top-2 font-bold text-xs" style={{ color: modoSimulador ? '#3b82f6' : '#ff6600' }}>$</span>
-                <input type="number" value={modoSimulador ? simCruceInt : cruceInt} onChange={e => { (modoSimulador ? setSimCruceInt : setCruceInt)(e.target.value); (modoSimulador ? setSimRutaIntSelect : setRutaIntSelect)(''); if(activeTab === 'maritimo') { setMaritimoProveedor(''); setMaritimoOrigen(''); setMaritimoDestino(''); setMaritimoEquipo(''); setMaritimoTipo(''); setMaritimoRow(null); } }} className="w-full bg-black border border-gray-700 rounded-lg p-2 pl-6 text-white font-bold text-sm outline-none focus:border-white" />
+                <input type="number" value={modoSimulador ? simCruceInt : cruceInt} onChange={e => { (modoSimulador ? setSimCruceInt : setCruceInt)(e.target.value); (modoSimulador ? setSimRutaIntSelect : setRutaIntSelect)(''); if(activeTab === 'maritimo' && TARIFARIO_DATA.some(r => r.p === maritimoProveedor)) { setMaritimoProveedor(''); setMaritimoOrigen(''); setMaritimoDestino(''); setMaritimoEquipo(''); setMaritimoTipo(''); setMaritimoRow(null); } }} className="w-full bg-black border border-gray-700 rounded-lg p-2 pl-6 text-white font-bold text-sm outline-none focus:border-white" />
               </div>
             </div>
             )}
           </div>}
+
+          {activeTab === 'maritimo' && (
+            <DesgloseMaritimo row={maritimoRow} tc={modoSimulador ? simTcHoy : tcHoy} accent={modoSimulador ? '#3b82f6' : '#ff6600'} />
+          )}
 
           {activeTab !== 'compras' && (
           <div className="mt-8 pt-5 border-t border-dashed border-gray-600">

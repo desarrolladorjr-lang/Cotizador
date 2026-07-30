@@ -1,3 +1,6 @@
+// Proveedores sin tarifas cargadas: aparecen en el dropdown pero no tienen rutas aún
+const TARIFARIO_PROVEEDORES_EXTRA = ['RAD', 'MAERSK', 'CMA CGM'];
+
 const TARIFARIO_DATA = [
   // GWT — MÉRIDA (PROGRESO)
   {p:'GWT',o:'Mérida',pol:'Progreso',pod:'Bilbao',pais:'España',nav:'CMA',tt:'38-45 días',via:'Caucedo/Rotterdam',eq:"20' DC",tipo:null,of:2701,dlo:14,dld:14},
