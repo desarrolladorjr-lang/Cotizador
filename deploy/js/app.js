@@ -90,6 +90,7 @@ function App() {
   const [maritimoDestino, setMaritimoDestino] = useState('');
   const [maritimoEquipo, setMaritimoEquipo] = useState('');
   const [maritimoTipo, setMaritimoTipo] = useState('');
+  const [maritimoRow, setMaritimoRow] = useState(null); // fila del tarifario resuelta, para el desglose
 
   // Simulator state
   const [modoSimulador, setModoSimulador] = useState(false);
@@ -279,16 +280,19 @@ function App() {
     const hasTipo = rows.some(r => r.tipo !== null);
     const match = hasTipo ? rows.find(r => r.tipo === maritimoTipo) : rows[0];
     if (match) {
-      const arrDesp = match.pol === 'Progreso' ? 12974 : 9360;
+      const desp = calcDespacho(match.pol);
+      setMaritimoRow(match);
       if (modoSimulador) {
         setSimCruceInt(match.of.toString());
-        setSimAduanaMex(arrDesp.toString());
+        setSimAduanaMex(desp.total.toString());
         setSimRutaIntSelect('');
       } else {
         setCruceInt(match.of.toString());
-        setAduanaMex(arrDesp.toString());
+        setAduanaMex(desp.total.toString());
         setRutaIntSelect('');
       }
+    } else {
+      setMaritimoRow(null);
     }
   }, [maritimoProveedor, maritimoOrigen, maritimoDestino, maritimoEquipo, maritimoTipo, modoSimulador]);
 
@@ -1415,7 +1419,7 @@ function App() {
               )}
               <div className="relative">
                 <span className="absolute left-2 top-2 font-bold text-xs" style={{ color: modoSimulador ? '#3b82f6' : '#ff6600' }}>$</span>
-                <input type="number" value={modoSimulador ? simCruceInt : cruceInt} onChange={e => { (modoSimulador ? setSimCruceInt : setCruceInt)(e.target.value); (modoSimulador ? setSimRutaIntSelect : setRutaIntSelect)(''); if(activeTab === 'maritimo') { setMaritimoProveedor(''); setMaritimoOrigen(''); setMaritimoDestino(''); setMaritimoEquipo(''); setMaritimoTipo(''); } }} className="w-full bg-black border border-gray-700 rounded-lg p-2 pl-6 text-white font-bold text-sm outline-none focus:border-white" />
+                <input type="number" value={modoSimulador ? simCruceInt : cruceInt} onChange={e => { (modoSimulador ? setSimCruceInt : setCruceInt)(e.target.value); (modoSimulador ? setSimRutaIntSelect : setRutaIntSelect)(''); if(activeTab === 'maritimo') { setMaritimoProveedor(''); setMaritimoOrigen(''); setMaritimoDestino(''); setMaritimoEquipo(''); setMaritimoTipo(''); setMaritimoRow(null); } }} className="w-full bg-black border border-gray-700 rounded-lg p-2 pl-6 text-white font-bold text-sm outline-none focus:border-white" />
               </div>
             </div>
             )}
