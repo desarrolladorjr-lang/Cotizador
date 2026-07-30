@@ -77,3 +77,17 @@ const TARIFARIO_DATA = [
   {p:'AMERICARGO',o:'Mérida',pol:'Progreso',pod:'Algeciras',pais:'España',nav:'CMA CGM',tt:'27 días',via:'Kingston',eq:"40' HC",tipo:null,of:2211.2,dlo:21,dld:14},
   {p:'AMERICARGO',o:'Mérida',pol:'Progreso',pod:'Damaiyu',pais:'China',nav:'MSC',tt:'45 días',via:'Ningbo',eq:"40' HC",tipo:null,of:5551,dlo:21,dld:14},
 ];
+
+// Despacho + arrastre por puerto de salida (MXN). Fuente: TARIFARIO MENSUAL SIDELL LOGISTICS.xlsx
+// Los valores dependen solo del POL: el xlsx repite los mismos dos juegos en sus 72 filas.
+const DESPACHO_POR_POL = {
+  'Progreso': { ped: 846,  man: 2678, hon: 4500, val: 300, cove: 150, arr: 4500 },
+  '_default': { ped: 1010, man: 2900, hon: 5000, val: 300, cove: 150, arr: 0    }, // Altamira / Ensenada
+};
+
+// Desglose + totales de despacho para un POL. Las sumas se calculan, no se hardcodean.
+function calcDespacho(pol) {
+  const d = DESPACHO_POR_POL[pol] || DESPACHO_POR_POL['_default'];
+  const totalAA = d.ped + d.man + d.hon + d.val + d.cove;  // xlsx col W = SUM(R:V)
+  return { ...d, totalAA, total: totalAA + d.arr };         // xlsx col Z = R+S+T+U+V+X
+}
