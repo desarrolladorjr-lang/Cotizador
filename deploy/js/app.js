@@ -13,7 +13,9 @@ function App() {
   const [cargandoTC, setCargandoTC] = useState(false);
 
   // Estados de los campos
-  const [cliente, setCliente] = useState('OMC');
+  // Cliente y destino arrancan vacios: no hay modalidad elegida al inicio, y sus
+  // catalogos son por-modalidad (ver efecto de reset mas abajo).
+  const [cliente, setCliente] = useState('');
 
   const [porcentajeFijacion, setPorcentajeFijacion] = useState("100");
   const [fixPrice, setFixPrice] = useState("2550.00");
@@ -32,7 +34,7 @@ function App() {
   const [ppProv, setPpProv] = useState("40.00");
 
   const [material, setMaterial] = useState('UBC');
-  const [destino, setDestino] = useState('Laredo, TX');
+  const [destino, setDestino] = useState('');
   const [origenEmbarque, setOrigenEmbarque] = useState('');
   const [rutaNacSelect, setRutaNacSelect] = useState('');
   const [rutaIntSelect, setRutaIntSelect] = useState('');
@@ -59,6 +61,26 @@ function App() {
   const [modoExport, setModoExport] = useState('');
   const modalidad  = destinoVenta === 'exportacion' ? modoExport : destinoVenta;
   const tieneVenta = modalidad !== '' && modalidad !== 'inventario';
+
+  // Cliente y destino son por-modalidad: los catalogos no se solapan entre hojas
+  // (mismo criterio que material/proveedor NO siguen, ver nota en CLAUDE.md).
+  const opcionesClienteActual =
+    modalidad === 'nacional'  ? optionsClientesNacional :
+    modalidad === 'terrestre' ? optionsClientesTerrestre :
+    modalidad === 'maritimo'  ? optionsClientesMaritimo : [];
+
+  const opcionesDestinoActual =
+    modalidad === 'nacional'  ? optionsDestinoNacional :
+    modalidad === 'terrestre' ? optionsDestinoTerrestre :
+    modalidad === 'maritimo'  ? optionsDestinoMaritimo : [];
+
+  // Si el valor actual no vive en el catalogo de la nueva modalidad, no lo dejamos
+  // sobrevivir al cambio: llegaria a la hoja equivocada con un valor ilegal.
+  useEffect(() => {
+    if (!opcionesClienteActual.includes(cliente)) setCliente('');
+    if (!opcionesDestinoActual.includes(destino)) setDestino('');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalidad]);
 
   const [proveedores, setProveedores] = useState([{ proveedor: '', cargas: '1' }]);
   const [tarifario, setTarifario] = useState({ proveedor: '', origen: '', destino: '', equipo: '', tipo: '' });
@@ -375,6 +397,7 @@ function App() {
               destino={destino} setDestino={setDestino} opcionesDestino={optionsDestinoNacional}
               precioTonMxn={precioTonNacional} setPrecioTonMxn={setPrecioTonNacional}
               precioTotalMxn={precioMxnNacional} setPrecioTotalMxn={setPrecioMxnNacional}
+              cargasTotales={cargasTotales}
             />
           )}
 
@@ -462,12 +485,12 @@ function App() {
 
           <button
             onClick={handleGuardarCotizacion}
-            disabled={guardando || modalidad === ''}
+            disabled={guardando || modalidad === '' || (tieneVenta && (cliente === '' || destino === ''))}
             className="w-full mt-2 flex items-center justify-center gap-2 py-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg transition-all transform active:scale-95 border"
             style={{
-              backgroundColor: (guardando || modalidad === '') ? '#374151' : '#ff6600',
-              color: (guardando || modalidad === '') ? '#9ca3af' : '#ffffff',
-              borderColor: (guardando || modalidad === '') ? '#4b5563' : '#ea580c'
+              backgroundColor: (guardando || modalidad === '' || (tieneVenta && (cliente === '' || destino === ''))) ? '#374151' : '#ff6600',
+              color: (guardando || modalidad === '' || (tieneVenta && (cliente === '' || destino === ''))) ? '#9ca3af' : '#ffffff',
+              borderColor: (guardando || modalidad === '' || (tieneVenta && (cliente === '' || destino === ''))) ? '#4b5563' : '#ea580c'
             }}
           >
             {guardando ? 'Guardando...' : '💾 Guardar Trato'}

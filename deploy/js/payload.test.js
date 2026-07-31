@@ -114,6 +114,27 @@ describe('construirPayload — campos condicionales', () => {
   });
 });
 
+describe('construirPayload — modalidad vacía', () => {
+  it('rechaza modalidad vacía en vez de omitir la etiqueta silenciosamente', () => {
+    expect(() => construirPayload({ ...base, modalidad: '' })).toThrow();
+  });
+});
+
+describe('construirPayload — cruceInt por modalidad', () => {
+  it('manda el cruce internacional en terrestre y maritimo', () => {
+    expect(construirPayload({ ...base, modalidad: 'terrestre' }).cruceInt).toBe(1000);
+    expect(construirPayload({ ...base, modalidad: 'maritimo' }).cruceInt).toBe(1000);
+  });
+
+  it('fuerza cruceInt a 0 en nacional e inventario aunque el estado traiga un valor viejo de maritimo', () => {
+    expect(construirPayload({ ...base, modalidad: 'nacional', cruceInt: '1441.53' }).cruceInt).toBe(0);
+    expect(construirPayload({
+      ...base, modalidad: 'inventario', cruceInt: '1441.53',
+      calculo: { tcSeguro: 0, capKg: 24500, precioVenta: 0, precioTopeCompra: 0, utilidadNeta: 0, utilidadPorKg: 0, status: '' },
+    }).cruceInt).toBe(0);
+  });
+});
+
 describe('construirPayload — estatus', () => {
   const s = status => construirPayload({ ...base, calculo: { ...calculo, status } }).status;
 

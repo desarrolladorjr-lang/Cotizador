@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { calcularCotizacion, KG_POR_CARGA } = require('./calc.js');
+const { calcularCotizacion, KG_POR_CARGA, precioTotalNacionalDesdeTon } = require('./calc.js');
 
 const base = {
   porcentajeFijacion: '100',
@@ -109,6 +109,38 @@ describe('calcularCotizacion — nacional', () => {
 
   it('reparte el precio total entre todas las cargas', () => {
     expect(r.precioTopeCompra).toBeCloseTo(8.7878, 4);
+  });
+});
+
+describe('calcularCotizacion — modalidad vacía', () => {
+  it('rechaza modalidad vacía en vez de caer al calculo de terrestre', () => {
+    expect(() => calcularCotizacion({ ...base, modalidad: '' })).toThrow();
+  });
+});
+
+describe('precioTotalNacionalDesdeTon', () => {
+  it('convierte precio por tonelada a total del embarque para una carga', () => {
+    // 1 carga x 24.5 ton x 20000 MXN/ton = 490000
+    expect(precioTotalNacionalDesdeTon('20000', 1)).toBe('490000.00');
+  });
+
+  it('multiplica por las cargas totales, no solo una carga', () => {
+    // dos proveedores x 1.5 cargas = 3 cargas totales; 20000 MXN/ton
+    // 3 cargas x 24.5 ton x 20000 = 1470000, que calc.js reparte de vuelta a 20/ton
+    const total = precioTotalNacionalDesdeTon('20000', 3);
+    expect(total).toBe('1470000.00');
+    const r = calcularCotizacion({
+      ...base, modalidad: 'nacional', precioTotalMxn: total, cargasTotales: 3,
+    });
+    expect(r.precioTopeCompra).toBeCloseTo(20 - 0.60, 4); // ingresoKgMxn=20, sin flete/maniobras extra salvo 0.60
+  });
+
+  it('deja el total vacío si el precio por ton está vacío', () => {
+    expect(precioTotalNacionalDesdeTon('', 3)).toBe('');
+  });
+
+  it('usa 1 carga como default si cargasTotales no es numérico', () => {
+    expect(precioTotalNacionalDesdeTon('100', undefined)).toBe('2450.00');
   });
 });
 

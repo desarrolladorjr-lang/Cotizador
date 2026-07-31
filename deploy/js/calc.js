@@ -9,10 +9,23 @@
 
   const truncar = n => Math.trunc(n * 100) / 100;
 
+  // Ayuda de captura de Nacional: el operador piensa en precio por tonelada,
+  // pero calcularCotizacion espera el total del embarque completo (todas las
+  // cargas). Vive aquí, no en la JSX, para que sea una función pura y testable.
+  function precioTotalNacionalDesdeTon(precioTonMxn, cargasTotales) {
+    if (precioTonMxn === '' || precioTonMxn === null || precioTonMxn === undefined) return '';
+    const cargas = Number(cargasTotales) || 1;
+    const total = Number(precioTonMxn) * cargas * (KG_POR_CARGA.nacional / 1000);
+    return total.toFixed(2);
+  }
+
   function calcularCotizacion(e) {
     const num = v => Number(v) || 0;
 
     const modalidad = e.modalidad;
+    if (modalidad === '') {
+      throw new Error('calcularCotizacion: modalidad vacía — la captura está incompleta, no hay leaf que calcular.');
+    }
     const tieneVenta = modalidad !== 'inventario';
 
     const numTcHoy = num(e.tcHoy);
@@ -78,7 +91,7 @@
     };
   }
 
-  const api = { KG_POR_CARGA, calcularCotizacion };
+  const api = { KG_POR_CARGA, calcularCotizacion, precioTotalNacionalDesdeTon };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else Object.assign(root, api);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

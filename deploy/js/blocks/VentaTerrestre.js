@@ -44,12 +44,14 @@ function VentaTerrestre({
         <div>
           <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Cliente</label>
           <select value={cliente} onChange={e => setCliente(e.target.value)} className={selCls + " truncate"}>
+            <option value="">— Cliente —</option>
             {opcionesCliente.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Destino</label>
           <select value={destino} onChange={e => setDestino(e.target.value)} className={selCls + " truncate"}>
+            <option value="">— Destino —</option>
             {opcionesDestino.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>

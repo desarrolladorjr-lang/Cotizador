@@ -16,6 +16,9 @@
   };
 
   function construirPayload(e) {
+    if (e.modalidad === '') {
+      throw new Error('construirPayload: modalidad vacía — la captura está incompleta, no hay hoja destino.');
+    }
     const num = v => Number(v) || 0;
     const tieneVenta = e.modalidad !== 'inventario';
     const c = e.calculo;
@@ -40,7 +43,10 @@
       tcHoy: num(e.tcHoy),
       tcSeguro: Number(c.tcSeguro.toFixed(2)),
       fleteNac: num(e.fleteNac),
-      cruceInt: num(e.cruceInt),
+      // El cruce internacional es una fila del tarifario marítimo (o del flete
+      // internacional terrestre); en Nacional/Inventario no tiene sentido y puede
+      // quedar en el estado de una modalidad anterior si el usuario cambió de venta.
+      cruceInt: (e.modalidad === 'nacional' || e.modalidad === 'inventario') ? 0 : num(e.cruceInt),
       precioTopeCompra: Number(c.precioTopeCompra.toFixed(2)),
       ppProv: Number(num(e.ppProv).toFixed(2)),
       status: ETIQUETA_STATUS[c.status] ?? 'Pérdida',

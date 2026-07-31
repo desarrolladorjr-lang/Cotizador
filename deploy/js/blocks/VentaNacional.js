@@ -5,6 +5,7 @@ function VentaNacional({
   destino, setDestino, opcionesDestino,
   precioTonMxn, setPrecioTonMxn,
   precioTotalMxn, setPrecioTotalMxn,
+  cargasTotales,
 }) {
   const selCls = "w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none focus:border-white transition-colors appearance-none";
 
@@ -16,12 +17,14 @@ function VentaNacional({
         <div>
           <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Cliente</label>
           <select value={cliente} onChange={e => setCliente(e.target.value)} className={selCls + " truncate"}>
+            <option value="">— Cliente —</option>
             {opcionesCliente.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Destino</label>
           <select value={destino} onChange={e => setDestino(e.target.value)} className={selCls + " truncate"}>
+            <option value="">— Destino —</option>
             {opcionesDestino.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
         </div>
@@ -36,7 +39,7 @@ function VentaNacional({
                    onChange={e => {
                      const val = e.target.value;
                      setPrecioTonMxn(val);
-                     setPrecioTotalMxn(val === '' ? '' : (Number(val) * 24.5).toFixed(2));
+                     setPrecioTotalMxn(precioTotalNacionalDesdeTon(val, cargasTotales));
                    }}
                    placeholder="0.00"
                    className="w-full bg-transparent border-b border-gray-700 p-1.5 pl-5 text-gray-300 font-mono font-bold text-sm outline-none focus:border-white" />
