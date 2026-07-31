@@ -1,7 +1,45 @@
+var CLIENT_ID = '65144242856-79jgp1htcetc9g9ht1b3vkl5q3j2uh2b.apps.googleusercontent.com';
+var DOMINIO_PERMITIDO = 'sidellscrap.com';
+
+// Verifica el id_token de Google Sign-In contra el endpoint de Google.
+//
+// El cliente ya filtra por dominio en handleCredentialResponse, pero esa comprobacion
+// vive en el navegador: la URL de este script es publica y cualquiera puede POSTear
+// directo. Esta es la comprobacion que cuenta.
+//
+// Devuelve el correo verificado, o null si el token no sirve.
+function validarCredencial(credential) {
+  if (!credential) return null;
+
+  var resp = UrlFetchApp.fetch(
+    'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credential),
+    { muteHttpExceptions: true }
+  );
+  // Google devuelve 400 para tokens malformados, con firma invalida o expirados.
+  if (resp.getResponseCode() !== 200) return null;
+
+  var info = JSON.parse(resp.getContentText());
+  if (info.aud !== CLIENT_ID) return null;
+  if (String(info.email_verified) !== 'true') return null;
+  if (!info.email || info.email.split('@')[1] !== DOMINIO_PERMITIDO) return null;
+
+  return info.email;
+}
+
 function doPost(e) {
   try {
-    var spreadsheet = SpreadsheetApp.openById('12-gjHHdqqAVsLsEE3I94MxpE9POpRVTBfMorLByrn-A');
     var data = JSON.parse(e.postData.contents);
+
+    var correoVerificado = validarCredencial(data.credential);
+    if (!correoVerificado) {
+      return ContentService
+        .createTextOutput(JSON.stringify({ "error": "No autorizado" }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    // El autor lo dicta el token, no el cuerpo del POST: data.usuario es suplantable.
+    data.usuario = correoVerificado;
+
+    var spreadsheet = SpreadsheetApp.openById('12-gjHHdqqAVsLsEE3I94MxpE9POpRVTBfMorLByrn-A');
 
     // 1. Determinar la hoja de destino basada en la modalidad
     var sheet;

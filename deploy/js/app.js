@@ -1,13 +1,47 @@
 const { useState, useEffect } = React;
 
+// La sesion es el id_token de Google, no el perfil: el backend valida el token y de ahi
+// saca el correo. Guardar solo el perfil dejaba la app "con sesion" tras recargar pero
+// sin credencial que mandar, y el guardado fallaba en silencio.
+const SESION_KEY = 'sesionCotizador';
+
+// exp del JWT, en milisegundos. null si el token no es legible.
+function expiracionDeToken(credential) {
+  try {
+    const base64 = credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const { exp } = JSON.parse(decodeURIComponent(atob(base64).split('').map(
+      c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+    ).join('')));
+    return exp ? exp * 1000 : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Medio minuto de colchon para que un token no expire entre el chequeo y el POST.
+const MARGEN_EXPIRACION_MS = 30000;
+
+function sesionVigente(sesion) {
+  return !!sesion && !!sesion.credential && !!sesion.expiraEn
+    && sesion.expiraEn - MARGEN_EXPIRACION_MS > Date.now();
+}
+
+function leerSesionGuardada() {
+  try {
+    const sesion = JSON.parse(localStorage.getItem(SESION_KEY));
+    // Un token expirado no sirve para guardar, asi que no cuenta como sesion.
+    return sesionVigente(sesion) ? sesion : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function App() {
-  const [usuario, setUsuario] = useState(() => {
-    const saved = localStorage.getItem('usuarioCotizador');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [sesion, setSesion] = useState(leerSesionGuardada);
+  const usuario = sesion ? sesion.perfil : null;
+  const credToken = sesion ? sesion.credential : '';
   const [errorLogin, setErrorLogin] = useState('');
 
-  const [credToken, setCredToken] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState('');
   const [cargandoTC, setCargandoTC] = useState(false);
@@ -144,9 +178,14 @@ function App() {
     const payload = JSON.parse(jsonPayload);
 
     if (payload.email.endsWith('@sidellscrap.com')) {
-      setCredToken(response.credential);
-      setUsuario(payload);
-      localStorage.setItem('usuarioCotizador', JSON.stringify(payload));
+      // Este filtro es de conveniencia: quien manda es validarCredencial en Codigo.gs.
+      const nuevaSesion = {
+        perfil: payload,
+        credential: response.credential,
+        expiraEn: expiracionDeToken(response.credential),
+      };
+      setSesion(nuevaSesion);
+      localStorage.setItem(SESION_KEY, JSON.stringify(nuevaSesion));
       setErrorLogin('');
       if (window.google) window.google.accounts.id.cancel();
 
@@ -243,6 +282,16 @@ function App() {
   ])].sort();
 
   const handleGuardarCotizacion = async () => {
+    // El backend rechaza los tokens vencidos, y el POST va en no-cors: si dejaramos
+    // salir uno vencido, la respuesta seria opaca y el usuario veria el check verde
+    // sin que se guardara nada. Se corta aqui y se pide entrar de nuevo.
+    if (!sesionVigente(sesion)) {
+      setSesion(null);
+      localStorage.removeItem(SESION_KEY);
+      setErrorLogin('Tu sesión expiró. Vuelve a entrar y captura de nuevo.');
+      return;
+    }
+
     setGuardando(true);
     try {
       const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOX2dJUvvpRcDkHYstwnezDyyfeIpUtfdnpuwRtZxICOu2AorLT80PvO6LP7wudRGh_A/exec";
@@ -323,8 +372,8 @@ function App() {
             <span className="font-bold text-gray-300 truncate">{usuario.email}</span>
           </div>
           <button onClick={() => {
-            setUsuario(null);
-            localStorage.removeItem('usuarioCotizador');
+            setSesion(null);
+            localStorage.removeItem(SESION_KEY);
             if (window.google) window.google.accounts.id.disableAutoSelect();
           }} className="text-red-400 font-bold hover:text-red-300 transition-colors">Salir</button>
         </div>
