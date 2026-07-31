@@ -123,4 +123,9 @@ describe('construirPayload — estatus', () => {
     expect(s('bad')).toBe('Pérdida');
     expect(s('')).toBe('');
   });
+
+  it('mapea valores desconocidos a Pérdida para evitar undefined', () => {
+    expect(s('quien-sabe')).toBe('Pérdida');
+    expect(s('unknown-status')).toBe('Pérdida');
+  });
 });

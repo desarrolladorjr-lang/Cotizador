@@ -43,7 +43,7 @@
       cruceInt: num(e.cruceInt),
       precioTopeCompra: Number(c.precioTopeCompra.toFixed(2)),
       ppProv: Number(num(e.ppProv).toFixed(2)),
-      status: ETIQUETA_STATUS[c.status],
+      status: ETIQUETA_STATUS[c.status] ?? 'Pérdida',
       utilidadNeta: Number(c.utilidadNeta.toFixed(2)),
       tipoCompra: 'Compra Mercado',
       notas: e.notas,
