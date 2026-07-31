@@ -171,6 +171,17 @@ Los sufijos `[INV]` / `[IV]` / `[IC]` que hoy se concatenan al nombre del provee
 desaparecen: la intención ya está en `paraInventarios` / `intencionVenta`, que se derivan
 de `modalidad` y aplican al registro completo, no por fila de proveedor.
 
+**`intencionCompra` queda permanentemente en `false`.** El tipo "Intención de Compra" de
+la pestaña Compras se retira: en la práctica era lo mismo que Inventario, y esos casos se
+capturan ahora con el chip Inventario. El campo se conserva en el payload por contrato con
+la hoja, pero ya no hay estado que lo active.
+
+`origenFlete`, `destinoFlete` y `precioCompraMxn` pasan a llenarse en **las cuatro**
+modalidades, no sólo en Compras como hoy. Es consecuencia directa de que el bloque de
+compra sea universal y de que el precio de compra sea un solo campo (§4): la hoja empieza
+a recibir valores en columnas que antes venían vacías o en cero para Terrestre, Marítimo y
+Nacional. Es intencional.
+
 El resto de campos (`fecha`, `usuario`, `material`, `destino`, `porcentajeFijacion`,
 `fixPrice`, `precioVenta`, `tcHoy`, `tcSeguro`, `fleteNac`, `cruceInt`,
 `precioTopeCompra`, `status`, `utilidadNeta`, `notas`, `embalaje`, `negociacion`)
