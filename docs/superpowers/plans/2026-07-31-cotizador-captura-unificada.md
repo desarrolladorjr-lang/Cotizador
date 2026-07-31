@@ -649,7 +649,7 @@ Componente nuevo, todavía sin renderizar. La app sigue funcionando igual.
 - Modify: `deploy/index.html`
 
 **Interfaces:**
-- Consumes: `KG_POR_CARGA` de `calc.js`; el global `FLETES_NACIONALES_COMPRAS` de `data-fletes-nacionales.js`.
+- Consumes: el global `FLETES_NACIONALES_COMPRAS` de `data-fletes-nacionales.js`. La capacidad por carga llega ya resuelta en la prop `capKg`, no se lee `KG_POR_CARGA` aquí.
 - Produces:
   ```jsx
   <BloqueCompra
