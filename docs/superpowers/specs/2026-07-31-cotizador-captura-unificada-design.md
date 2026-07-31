@@ -28,17 +28,29 @@ se desbloquean hacia abajo los campos que aplican. Ningún campo escrito dos vec
 
 ## Modelo
 
-Un único estado raíz:
+La captura es un árbol de dos niveles. Primero se captura la compra; después se elige qué
+se hace con el material, y esa elección abre lo que corresponde:
 
 ```js
-modalidad ∈ { 'terrestre' | 'maritimo' | 'nacional' | 'inventario' }
+destinoVenta ∈ { '' | 'inventario' | 'nacional' | 'exportacion' }
+modoExport   ∈ { '' | 'terrestre' | 'maritimo' }   // sólo si destinoVenta === 'exportacion'
 ```
 
-Derivado, no es estado:
+Derivados, no son estado:
 
 ```js
-const tieneVenta = modalidad !== 'inventario';
+const modalidad  = destinoVenta === 'exportacion' ? modoExport : destinoVenta;
+const tieneVenta = modalidad !== '' && modalidad !== 'inventario';
 ```
+
+`modalidad` es la hoja del árbol y toma los mismos cuatro valores de siempre —
+`'terrestre' | 'maritimo' | 'nacional' | 'inventario'` — más `''` mientras la elección
+está incompleta (nada elegido, o Exportación sin submodo). Todo lo que consume la
+modalidad (el motor de cálculo, el armado del payload) no distingue por qué camino se
+llegó a la hoja.
+
+Con `modalidad === ''` no se calcula nada: no hay tope, no hay semáforo, no hay total en
+KG, y el botón de guardar está deshabilitado.
 
 Cada cotización captura **la compra siempre** y **la venta cuando la hay**. `inventario`
 es el caso de compra sin venta ligada todavía.
@@ -47,45 +59,61 @@ es el caso de compra sin venta ligada todavía.
 
 | Estado | Motivo |
 |---|---|
-| `activeTab` | Reemplazado por `modalidad` |
+| `activeTab` | Reemplazado por `destinoVenta` + `modoExport` |
 | `compraDirecta`, `modoNuevoSurtido` | Back to Back sale del alcance (ver Fuera de alcance) |
 | `contrato`, `pendientes`, `hasFetchedPendientes`, `cargandoPendientes`, `errorPendientes`, `fetchPendientes()` | Sólo servían a Back to Back |
 | `modoSimulador` y todos los `sim*` (~15 estados + su `useEffect` de cálculo + `obtenerTipoDeCambioSim`) | El modo Simular desaparece |
 | `comprasTipo`, `intencionVentaModalidad` | Absorbidos por `modalidad` |
 | `precioCompraMxnCompras` | Se fusiona con `ppProv` (ver §4) |
 
-Cambiar de chip **no** borra lo capturado en el bloque de compra; sólo cambia qué
+Cambiar de destino **no** borra lo capturado en el bloque de compra; sólo cambia qué
 campos muestra el bloque de venta.
 
 ## Layout
 
 ```
-┌ [Terrestre] [Marítimo] [Nacional] [Inventario] ┐  paso 1 — modalidad
-├ COMPRA   (siempre visible)                     ┤  paso 2
-├ VENTA    (si tieneVenta)                       ┤  paso 3
-└ Resultado + Guardar                            ┘
+┌ COMPRA                                        ┐  paso 1 — siempre visible
+├ VENTA                                         ┤
+│   [Inventario] [Nacional] [Exportación]       │  paso 2 — destino
+│      └ si Exportación: [Terrestre] [Marítimo] │  paso 3 — submodo
+│         └ campos de esa hoja                  │  paso 4
+└ Resultado + Guardar (si modalidad ≠ '')       ┘
 ```
 
-## §1 — Selector de modalidad
+## §1 — Selector de destino
 
-Cuatro chips en una fila, reemplazan la barra de pestañas actual. Terrestre / Marítimo /
-Nacional en naranja `#ff6600` (el acento actual); Inventario en verde `#16a34a` (el color
-que hoy usa la pestaña Compras).
+Vive dentro del bloque de venta, no arriba de la pantalla. Dos filas encadenadas:
+
+- **Destino** — `Inventario` · `Nacional` · `Exportación`. Inventario en verde `#16a34a`
+  (el color que hoy usa la pestaña Compras); Nacional y Exportación en naranja `#ff6600`.
+- **Submodo** — aparece sólo con `Exportación` elegido: `Terrestre` · `Marítimo`, en
+  naranja. Cambiar de destino a algo que no sea Exportación limpia `modoExport`.
+
+Elegir `Inventario` no abre campos de venta: no hay venta que capturar.
 
 ## §2 — Bloque COMPRA
 
-Idéntico en las cuatro modalidades. Toma los campos que hoy sólo existen dentro de la
-pestaña Compras:
+Es lo primero de la pantalla y es idéntico en las cuatro modalidades. Toma los campos que
+hoy sólo existen dentro de la pestaña Compras:
 
 - **Proveedores y cargas** — filas `{ proveedor, cargas }`, botón `✕` para quitar
   (mínimo una fila), total KG/LB calculado.
 - **Embalaje** — `PACAS | JUMBOS | GAYLORD`
 - **Negociación** — `RECOLECCION DIRECTA | RECOLECCION BMTY | DIRECTO ENTREGA | BMTY ENTREGA | LAREDO ENTREGA`
-- **Material** — catálogo por modalidad (`optionsMaterial*`)
+- **Material** — catálogo único
 - **Origen → Destino (flete nacional)** — autollena `fleteNac` desde
   `FLETES_NACIONALES_COMPRAS`; si no hay match, `fleteNac = "0"`.
 - **Flete Nac.** — editable; editarlo a mano limpia origen y destino.
 - **Precio de compra** — campo único, ver §4.
+
+Como la compra se captura **antes** de conocer el destino, dos cosas se resuelven así:
+
+- **Catálogos de material y proveedor: la unión de los tres**, sin duplicados
+  (`optionsMaterialTerrestre ∪ Maritimo ∪ Nacional`, y lo mismo para proveedor). No se
+  filtran por modalidad — el material se compra en México sin importar a dónde vaya.
+- **El total KG/LB se oculta mientras `modalidad === ''`.** Las cargas se capturan igual,
+  pero no se convierten a kilos hasta que el destino define la capacidad. Mostrar un total
+  con una capacidad supuesta sería mentir sobre el peso.
 
 Capacidad por carga según modalidad:
 
@@ -94,6 +122,7 @@ Capacidad por carga según modalidad:
 | terrestre | 19 500 |
 | maritimo | `capacidadCNT × 1000` |
 | nacional, inventario | 24 500 |
+| `''` (sin destino) | sin total: no se muestra |
 
 ## §3 — Bloque VENTA
 
@@ -225,6 +254,10 @@ global. `calc.js` expone funciones puras que reciben los números y devuelven
   escrita en la hoja tiene las mismas columnas y valores que antes del cambio.
 - Marítimo con proveedor con tarifario y sin tarifario: `aduanaMex` en `"2308"` y `"0"`
   respectivamente, y el tope resultante coincide con el de la versión actual.
-- Cambiar de chip conserva lo capturado en el bloque de compra.
+- Cambiar de destino conserva lo capturado en el bloque de compra.
+- Al cargar, sin destino elegido: el bloque de compra se captura completo, no hay total
+  KG/LB, no hay tope ni semáforo, y guardar está deshabilitado.
+- Elegir Exportación sin submodo deja la pantalla en ese mismo estado incompleto; elegir
+  Terrestre o Marítimo la completa.
 - Inventario: no aparece bloque de venta, no aparece tope ni semáforo, y el payload sale
   con `paraInventarios: true`, `intencionVenta: false`, `modalidad: 'Compras'`.

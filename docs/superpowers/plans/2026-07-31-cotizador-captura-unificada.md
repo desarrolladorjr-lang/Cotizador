@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Reemplazar las 4 pestañas y los toggles anidados del cotizador por una sola pantalla con un único eje `modalidad`, sin cambiar el payload que llega a Google Sheets.
+**Goal:** Reemplazar las 4 pestañas y los toggles anidados del cotizador por una sola pantalla que captura primero la compra y luego el destino de la venta (Inventario / Nacional / Exportación → Terrestre o Marítimo), sin cambiar el payload que llega a Google Sheets.
 
 **Architecture:** La lógica pura (motor de cálculo y armado del payload) sale de `deploy/js/app.js` a dos módulos con pruebas: `deploy/js/calc.js` y `deploy/js/payload.js`. La UI se parte en un bloque de compra y tres bloques de venta, cada uno en su archivo. `app.js` queda como shell: login, estado raíz y orquestación.
 
@@ -656,7 +656,7 @@ Componente nuevo, todavía sin renderizar. La app sigue funcionando igual.
     proveedores={[{ proveedor, cargas }]}  setProveedores={fn}
     opcionesProveedor={[string]}
     material={string}                      setMaterial={fn}
-    opcionesMaterial={[string]}
+    opcionesMaterial={[string]}            // unión de los tres catálogos
     embalaje={string}                      setEmbalaje={fn}
     negociacion={string}                   setNegociacion={fn}
     origenFlete={string}                   setOrigenFlete={fn}
@@ -664,7 +664,7 @@ Componente nuevo, todavía sin renderizar. La app sigue funcionando igual.
     rutaNacSelect={string}                 setRutaNacSelect={fn}
     fleteNac={string}                      setFleteNac={fn}
     ppProv={string}                        setPpProv={fn}
-    capKg={number}
+    capKg={number|null}                    // null mientras no haya destino de venta
   />
   ```
 
@@ -699,10 +699,11 @@ function BloqueCompra({
 }) {
   const selCls = "w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-xs outline-none focus:border-white transition-colors appearance-none";
 
+  // El destino de venta define los kg por carga. Sin destino no hay total honesto que
+  // mostrar, así que se oculta en vez de suponer una capacidad.
   const cargasTotales = proveedores.reduce((s, r) => s + (Number(r.cargas) || 0), 0);
-  const kg = cargasTotales * capKg;
-  const lb = kg * 2.20462;
-  const totalCompra = (Number(ppProv) || 0) * kg;
+  const kg = capKg === null ? null : cargasTotales * capKg;
+  const totalCompra = kg === null ? null : (Number(ppProv) || 0) * kg;
 
   const actualizar = (i, campo, valor) => {
     setProveedores(proveedores.map((r, j) => j === i ? { ...r, [campo]: valor } : r));
@@ -749,10 +750,17 @@ function BloqueCompra({
         ))}
         <div className="flex items-center justify-between">
           <button onClick={agregar} className="text-[9px] font-black uppercase tracking-wide" style={{ color: '#ff6600' }}>+ Proveedor</button>
-          <div className="bg-gray-800 px-3 py-1.5 rounded border border-gray-700 text-center whitespace-nowrap">
-            <div className="text-white text-[11px] font-black leading-tight">{kg.toLocaleString()} KG</div>
-            <div className="text-gray-500 text-[9px] font-bold leading-tight">{Math.round(lb).toLocaleString()} LB</div>
-          </div>
+          {kg === null ? (
+            <div className="text-[9px] text-gray-600 font-bold text-right leading-tight">
+              {cargasTotales} carga{cargasTotales === 1 ? '' : 's'}<br />
+              <span className="text-gray-700">Elige el destino para ver los KG</span>
+            </div>
+          ) : (
+            <div className="bg-gray-800 px-3 py-1.5 rounded border border-gray-700 text-center whitespace-nowrap">
+              <div className="text-white text-[11px] font-black leading-tight">{kg.toLocaleString()} KG</div>
+              <div className="text-gray-500 text-[9px] font-bold leading-tight">{Math.round(kg * 2.20462).toLocaleString()} LB</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -824,9 +832,11 @@ function BloqueCompra({
           <input type="number" step="0.01" value={ppProv} onChange={e => setPpProv(e.target.value)} placeholder="0.00"
                  className="w-full bg-black border border-gray-700 rounded-lg p-2.5 pl-6 text-green-400 font-mono font-bold text-sm outline-none focus:border-white" />
         </div>
-        <div className="text-[9px] text-gray-500 font-bold mt-1 text-right">
-          Total: {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalCompra)}
-        </div>
+        {totalCompra !== null && (
+          <div className="text-[9px] text-gray-500 font-bold mt-1 text-right">
+            Total: {new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(totalCompra)}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1462,9 +1472,9 @@ git commit -m "feat(cotizador): bloque de venta maritimo con el desglose del tar
 
 ---
 
-### Task 7: Shell con un solo eje de modalidad
+### Task 7: Shell con el árbol de captura de dos niveles
 
-Reescribe el cuerpo de `App` para usar `modalidad`, renderizar los bloques y borrar todo el estado muerto. Es el cambio grande; los bloques ya existen y están probados a mano.
+Reescribe el cuerpo de `App` para usar `destinoVenta` + `modoExport`, renderizar los bloques en orden compra→venta y borrar todo el estado muerto. Es el cambio grande; los bloques ya existen y están probados a mano.
 
 **Files:**
 - Modify: `deploy/js/app.js` (todo el componente `App`)
@@ -1487,8 +1497,12 @@ En `deploy/js/app.js`, borrar estas declaraciones de estado y todo lo que las us
 Y agregar en su lugar:
 
 ```jsx
-  const [modalidad, setModalidad] = useState('terrestre');
-  const tieneVenta = modalidad !== 'inventario';
+  // Arbol de captura de dos niveles. `modalidad` es la hoja y vale '' mientras la
+  // eleccion este incompleta (nada elegido, o Exportacion sin submodo).
+  const [destinoVenta, setDestinoVenta] = useState('');
+  const [modoExport, setModoExport] = useState('');
+  const modalidad  = destinoVenta === 'exportacion' ? modoExport : destinoVenta;
+  const tieneVenta = modalidad !== '' && modalidad !== 'inventario';
 
   const [proveedores, setProveedores] = useState([{ proveedor: '', cargas: '1' }]);
   const [tarifario, setTarifario] = useState({ proveedor: '', origen: '', destino: '', equipo: '', tipo: '' });
@@ -1503,7 +1517,13 @@ Borrar los dos `useEffect` de cálculo (`app.js:486-554` y `app.js:557-603`) y l
 ```jsx
   const cargasTotales = proveedores.reduce((s, r) => s + (Number(r.cargas) || 0), 0);
 
-  const calculo = calcularCotizacion({
+  const CALCULO_VACIO = {
+    tcSeguro: 0, capKg: null, precioVenta: 0,
+    precioTopeCompra: 0, utilidadNeta: 0, utilidadPorKg: 0, status: '',
+  };
+
+  // Sin destino elegido no hay capacidad por carga, asi que no hay nada que calcular.
+  const calculo = modalidad === '' ? CALCULO_VACIO : calcularCotizacion({
     modalidad, porcentajeFijacion, fixPrice, tcHoy, diasCobro,
     fleteNac, cruceInt, aduanaMex, aduanaUsa, merma, maniobras, ppProv,
     capacidadCNT, precioTotalMxn: precioMxnNacional, cargasTotales,
@@ -1512,33 +1532,13 @@ Borrar los dos `useEffect` de cálculo (`app.js:486-554` y `app.js:557-603`) y l
   const { tcSeguro, capKg, precioVenta, precioTopeCompra, utilidadNeta, status } = calculo;
 ```
 
-- [ ] **Step 3: Reemplazar la barra de pestañas por los chips de modalidad**
+- [ ] **Step 3: Borrar la barra de pestañas**
 
-Sustituir el bloque `{/* Tabs */}` (`app.js:736-767` en el archivo original) por:
-
-```jsx
-        {/* Modalidad — único eje de la captura */}
-        <div className="flex border-b border-gray-700 bg-gray-900 text-[10px] font-black uppercase tracking-wider relative z-10">
-          {[
-            ['terrestre',  'Terrestre',  '#ff6600'],
-            ['maritimo',   'Marítimo',   '#ff6600'],
-            ['nacional',   'Nacional',   '#ff6600'],
-            ['inventario', 'Inventario', '#16a34a'],
-          ].map(([val, lbl, color]) => (
-            <button
-              key={val}
-              onClick={() => setModalidad(val)}
-              className={`flex-1 py-3 text-center transition-colors ${modalidad === val ? 'text-white border-b-2' : 'text-gray-500 hover:text-gray-300'}`}
-              style={{
-                borderColor: modalidad === val ? color : 'transparent',
-                color: modalidad === val && val === 'inventario' ? '#4ade80' : undefined,
-              }}
-            >
-              {lbl}
-            </button>
-          ))}
-        </div>
-```
+Eliminar por completo el bloque `{/* Tabs */}` (`app.js:736-767` en el archivo original).
+No lo reemplaza nada en esa posición: el selector de destino vive dentro del bloque de
+venta, más abajo (Step 4). Debajo del encabezado naranja y la barra de usuario, el
+siguiente elemento pasa a ser directamente el `<div className="p-6 space-y-5 relative z-10">`
+con el bloque de compra.
 
 - [ ] **Step 4: Reemplazar el cuerpo del formulario por los bloques**
 
@@ -1559,6 +1559,51 @@ Sustituir todo el contenido del `<div className="p-6 space-y-5 relative z-10">` 
             ppProv={ppProv} setPpProv={setPpProv}
             capKg={capKg}
           />
+
+          {/* Destino de la venta — segundo nivel del arbol */}
+          <div className="space-y-2 bg-gray-900 border border-gray-700 rounded-xl p-3">
+            <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Venta</div>
+
+            <div className="flex">
+              {[
+                ['inventario',  'Inventario',  '#16a34a'],
+                ['nacional',    'Nacional',    '#ff6600'],
+                ['exportacion', 'Exportación', '#ff6600'],
+              ].map(([val, lbl, color], idx, arr) => (
+                <button
+                  key={val}
+                  onClick={() => { setDestinoVenta(val); if (val !== 'exportacion') setModoExport(''); }}
+                  className={`flex-1 py-2 text-[9px] font-black uppercase tracking-wide transition-colors border ${idx === 0 ? 'rounded-l-lg' : idx === arr.length - 1 ? 'rounded-r-lg -ml-px' : '-ml-px'} ${
+                    destinoVenta === val ? 'text-white z-10 relative' : 'text-gray-500 bg-transparent border-gray-700 hover:text-gray-300'
+                  }`}
+                  style={destinoVenta === val ? { backgroundColor: color, borderColor: color } : {}}
+                >
+                  {lbl}
+                </button>
+              ))}
+            </div>
+
+            {destinoVenta === 'exportacion' && (
+              <div className="flex">
+                {[['terrestre', 'Terrestre'], ['maritimo', 'Marítimo']].map(([val, lbl], idx, arr) => (
+                  <button
+                    key={val}
+                    onClick={() => setModoExport(val)}
+                    className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-wide transition-colors border ${idx === 0 ? 'rounded-l-lg' : 'rounded-r-lg -ml-px'} ${
+                      modoExport === val ? 'text-white z-10 relative' : 'text-gray-500 bg-transparent border-gray-700 hover:text-gray-300'
+                    }`}
+                    style={modoExport === val ? { backgroundColor: '#ff6600', borderColor: '#ea580c' } : {}}
+                  >
+                    {lbl}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {destinoVenta === 'exportacion' && modoExport === '' && (
+              <p className="text-[9px] text-gray-500 font-bold">Elige terrestre o marítimo para continuar.</p>
+            )}
+          </div>
 
           {modalidad === 'nacional' && (
             <VentaNacional
@@ -1610,13 +1655,15 @@ Sustituir todo el contenido del `<div className="p-6 space-y-5 relative z-10">` 
 Y agregar, junto a los demás derivados:
 
 ```jsx
-  const opcionesMaterialActual = modalidad === 'terrestre' ? optionsMaterialTerrestre
-                               : modalidad === 'maritimo'  ? optionsMaterialMaritimo
-                               : optionsMaterialNacional;
+  // La compra se captura antes de conocer el destino, asi que los catalogos no se
+  // filtran por modalidad: el material se compra en Mexico vaya a donde vaya.
+  const opcionesMaterialActual = [...new Set([
+    ...optionsMaterialTerrestre, ...optionsMaterialMaritimo, ...optionsMaterialNacional,
+  ])].sort();
 
-  const opcionesProveedorActual = modalidad === 'terrestre' ? optionsProveedorTerrestre
-                                : modalidad === 'maritimo'  ? optionsProveedorMaritimo
-                                : optionsProveedorNacional;
+  const opcionesProveedorActual = [...new Set([
+    ...optionsProveedorTerrestre, ...optionsProveedorMaritimo, ...optionsProveedorNacional,
+  ])].sort();
 
   // Un proveedor marítimo "sin tarifario" aparece en el dropdown pero no tiene rutas.
   const sinTarifario = !!tarifario.proveedor
@@ -1660,7 +1707,7 @@ Reemplazar el `useEffect` que hoy busca `maritimoRow` y ajusta `aduanaMex` (`app
 El bloque `Tope Máximo de Compra` + semáforo se envuelve en `{tieneVenta && (...)}`. El input `¿A cuánto lo cerraste?` se elimina de ahí: el precio de compra ya se captura en `BloqueCompra`. En su lugar, para inventario:
 
 ```jsx
-          {!tieneVenta && (
+          {modalidad === 'inventario' && (
             <div className="text-center bg-black py-4 rounded-xl border border-green-700">
               <label className="block text-[10px] font-black uppercase tracking-widest mb-1 text-green-400">Costo de la Compra</label>
               <div className="text-3xl font-black text-white font-mono tracking-tight">
@@ -1670,6 +1717,10 @@ El bloque `Tope Máximo de Compra` + semáforo se envuelve en `{tieneVenta && (.
             </div>
           )}
 ```
+
+Con `modalidad === ''` no se pinta ninguno de los dos bloques de resultado, y el botón de
+guardar lleva `disabled={guardando || modalidad === ''}` con las clases de deshabilitado
+que ya usa cuando `guardando` es verdadero.
 
 Y `handleGuardarCotizacion` sustituye su objeto `payload` literal por:
 
@@ -1709,11 +1760,13 @@ npx serve deploy
 
 Con la consola del navegador abierta:
 
-1. Cargar, iniciar sesión: cuatro chips visibles, `Terrestre` activo, bloque de compra y bloque de venta terrestre pintados. Sin errores en consola.
-2. Capturar dos filas de proveedor y confirmar que el total KG cambia.
-3. Cambiar a `Marítimo`: el bloque de compra conserva proveedores, material, embalaje y precio de compra.
-4. Cambiar a `Inventario`: desaparece el bloque de venta, desaparece el tope y el semáforo, aparece "Costo de la Compra".
-5. Buscar `activeTab`, `modoSimulador` y `compraDirecta` en `deploy/js/app.js`: cero resultados.
+1. Cargar, iniciar sesión: se ve el bloque de compra completo y debajo los tres botones de destino, ninguno activo. No hay total KG/LB, no hay tope ni semáforo, y guardar está deshabilitado. Sin errores en consola.
+2. Capturar dos filas de proveedor: se ve el conteo de cargas, sigue sin haber KG.
+3. Elegir `Exportación`: aparecen `Terrestre` y `Marítimo` y el aviso de que falta elegir. Elegir `Terrestre`: aparece el bloque de venta terrestre, el total KG (cargas × 19 500) y el tope.
+4. Cambiar a `Marítimo`: el bloque de compra conserva proveedores, material, embalaje y precio de compra; el total KG cambia según el slider de capacidad.
+5. Cambiar a `Inventario`: desaparece el bloque de venta y el submodo, desaparece el tope y el semáforo, aparece "Costo de la Compra" con KG a 24 500 por carga.
+6. Verificar que el dropdown de material lista los tres catálogos unidos, sin duplicados.
+7. Buscar `activeTab`, `modoSimulador` y `compraDirecta` en `deploy/js/app.js`: cero resultados.
 
 - [ ] **Step 10: Commit**
 
@@ -1779,11 +1832,13 @@ git commit -m "chore(graphify): actualiza el grafo tras la captura unificada"
 
 | Sección del spec | Tarea |
 |---|---|
-| §Modelo — `modalidad`, `tieneVenta` | 7 |
+| §Modelo — `destinoVenta`, `modoExport`, `modalidad`, `tieneVenta` | 7 |
+| §Modelo — estado incompleto (`modalidad === ''`) | 3 (KG oculto), 7 (sin resultado, guardar deshabilitado) |
 | §Modelo — estado que se elimina | 7 |
 | §Layout | 7 |
-| §1 Selector de modalidad | 7 |
+| §1 Selector de destino + submodo de exportación | 7 |
 | §2 Bloque compra | 3 |
+| §2 Catálogos unidos, KG oculto sin destino | 3 (UI), 7 (unión de catálogos) |
 | §2 Capacidad por carga | 1 (`KG_POR_CARGA`), 7 (`capKg`) |
 | §3 Venta nacional | 4 |
 | §3 Venta terrestre | 5 |
