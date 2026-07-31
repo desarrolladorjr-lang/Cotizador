@@ -1492,6 +1492,7 @@ En `deploy/js/app.js`, borrar estas declaraciones de estado y todo lo que las us
 - `compraDirecta`, `modoNuevoSurtido`, `contrato`, `pendientes`, `hasFetchedPendientes`, `cargandoPendientes`, `errorPendientes`, y la función `fetchPendientes` completa con su `useEffect`
 - `modoSimulador` y **todos** los estados con prefijo `sim` (`simPrecioVenta`, `simTcHoy`, `simDiasCobro`, `simFleteNac`, `simCruceInt`, `simAduanaMex`, `simAduanaUsa`, `simMerma`, `simManiobras`, `simPpProv`, `simPorcentajeFijacion`, `simFixPrice`, `simRutaNacSelect`, `simRutaIntSelect`, `simPrecioTonNacional`, `simPrecioMxnNacional`, `simTcSeguro`, `simPrecioTopeCompra`, `simUtilidadNeta`, `simStatus`, `simCargandoTC`), el segundo `useEffect` de cálculo y `obtenerTipoDeCambioSim`
 - `comprasTipo`, `intencionVentaModalidad`, `precioCompraMxnCompras`, `ivNacPrecioTotal`, `comprasProveedores` (se renombra), `cargas`, `proveedor`
+- `maritimoProveedor`, `maritimoOrigen`, `maritimoDestino`, `maritimoEquipo`, `maritimoTipo` — los cinco se sustituyen por el objeto `tarifario`, que es lo que espera `<VentaMaritimo>`. `maritimoRow` se conserva.
 - los derivados `tabPendientes`, `currentContratos`, `visualKg`, `visualLb`, `comprasTotalCargas`, `numCargas`, y el `useEffect` que corrige material/cliente contra pendientes
 
 Y agregar en su lugar:
