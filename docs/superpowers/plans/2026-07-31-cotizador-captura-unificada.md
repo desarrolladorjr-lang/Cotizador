@@ -1820,12 +1820,13 @@ Capturar el mismo caso dos veces: proveedor **con** tarifario (por ejemplo `GWT`
 graphify update .
 ```
 
-- [ ] **Step 5: Commit**
+`graphify-out/` está en `.gitignore` (~80 MB, generado), así que **no hay commit** en este
+paso — el grafo es un artefacto local.
 
-```bash
-git add graphify-out
-git commit -m "chore(graphify): actualiza el grafo tras la captura unificada"
-```
+Si el comando se niega con un desajuste de conteo de nodos, no uses `--force` sin
+entender la diferencia: sobrescribir cambia el grafo existente por el nuevo y
+reconstruirlo cuesta llamadas de API (ver `graphify-out/cost.json`). El grafo
+desactualizado no bloquea nada del código.
 
 ---
 
