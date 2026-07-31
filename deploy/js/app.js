@@ -1,53 +1,5 @@
 const { useState, useEffect } = React;
 
-// Desglose de solo lectura del tarifario marítimo. Replica las columnas del xlsx.
-// Celda de concepto: etiqueta arriba, importe abajo. Se acomoda en rejilla horizontal.
-const Celda = ({ label, valor, accent, destacado }) => (
-  <div className={"rounded-lg px-2 py-1.5 border " + (destacado ? 'bg-gray-900' : 'bg-black border-gray-800')}
-       style={destacado ? { borderColor: accent } : undefined}>
-    <div className="text-[8px] font-black uppercase tracking-wider leading-tight" style={{ color: destacado ? accent : '#9ca3af' }}>{label}</div>
-    <div className="font-mono font-black whitespace-nowrap text-[11px]" style={{ color: destacado ? accent : '#e5e7eb' }}>{valor}</div>
-  </div>
-);
-
-function DesgloseMaritimo({ row, tc, accent }) {
-  if (!row) return null;
-
-  const d = calcDespacho(row.pol);
-  const numTc = Number(tc) || 0;
-
-  // El tarifario captura el despacho en MXN; aqui se muestra en USD al T.C. banco.
-  const usd = n => numTc > 0 ? 'USD ' + Math.round(n / numTc).toLocaleString('es-MX') : '—';
-
-  return (
-    <div className="bg-black rounded-xl border border-gray-700 p-3 mt-2">
-      <div className="flex items-baseline justify-between gap-2 mb-2">
-        <span className="text-[9px] font-black uppercase tracking-wider text-gray-500">Desglose — {row.pol}</span>
-        <span className="text-[9px] font-bold text-gray-600 font-mono">T.C. {numTc > 0 ? numTc.toFixed(2) : '—'}</span>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-        <Celda label="Ocean Freight" valor={'USD ' + row.of.toLocaleString('es-MX')} accent={accent} destacado />
-        <Celda label="Pedimento"     valor={usd(d.ped)}  accent={accent} />
-        <Celda label="Maniobras"     valor={usd(d.man)}  accent={accent} />
-        <Celda label="Honorarios"    valor={usd(d.hon)}  accent={accent} />
-        <Celda label="Validación"    valor={usd(d.val)}  accent={accent} />
-        <Celda label="Servicio COVE" valor={usd(d.cove)} accent={accent} />
-      </div>
-
-      <div className="h-px bg-gray-700 my-2"></div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-        <Celda label="Total AA"  valor={usd(d.totalAA)} accent={accent} />
-        <Celda label="Arrastre"  valor={usd(d.arr)}     accent={accent} />
-        <Celda label="Arrastre + Despacho" valor={usd(d.total)} accent={accent} destacado />
-      </div>
-
-      <div className="text-[8px] text-gray-600 font-bold leading-tight pt-1.5">Despacho convertido de MXN a T.C. banco</div>
-    </div>
-  );
-}
-
 function App() {
   const [usuario, setUsuario] = useState(() => {
     const saved = localStorage.getItem('usuarioCotizador');
