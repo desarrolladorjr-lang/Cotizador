@@ -661,6 +661,7 @@ Componente nuevo, todavía sin renderizar. La app sigue funcionando igual.
     negociacion={string}                   setNegociacion={fn}
     origenFlete={string}                   setOrigenFlete={fn}
     destinoFlete={string}                  setDestinoFlete={fn}
+    rutaNacSelect={string}                 setRutaNacSelect={fn}
     fleteNac={string}                      setFleteNac={fn}
     ppProv={string}                        setPpProv={fn}
     capKg={number}
@@ -672,6 +673,16 @@ Componente nuevo, todavía sin renderizar. La app sigue funcionando igual.
 `deploy/js/blocks/Compra.js`:
 
 ```jsx
+// Rutas de flete nacional con precio cerrado. Conviven con el par origen/destino:
+// la ruta es el atajo frecuente, origen/destino cubre el resto del tarifario.
+const RUTAS_FLETE_NAC = [
+  { name: "MID - MTY",       cost: 61480 },
+  { name: "GDL - MTY",       cost: 35960 },
+  { name: "MEX / TOL - MTY", cost: 38860 },
+  { name: "PUE - MTY",       cost: 49300 },
+  { name: "QRO - MTY",       cost: 35380 },
+];
+
 // Bloque de compra. Igual en las cuatro modalidades: el material se compra siempre
 // del mismo modo; lo que cambia por modalidad es cómo se vende.
 function BloqueCompra({
@@ -681,6 +692,7 @@ function BloqueCompra({
   negociacion, setNegociacion,
   origenFlete, setOrigenFlete,
   destinoFlete, setDestinoFlete,
+  rutaNacSelect, setRutaNacSelect,
   fleteNac, setFleteNac,
   ppProv, setPpProv,
   capKg,
@@ -701,9 +713,20 @@ function BloqueCompra({
   const origenes = [...new Set(FLETES_NACIONALES_COMPRAS.map(r => r.o))].sort();
   const destinos = [...new Set(FLETES_NACIONALES_COMPRAS.map(r => r.d))].sort();
 
+  // Origen/destino y ruta fija son dos caminos al mismo dato: elegir uno limpia el otro.
   const buscarFlete = (o, d) => {
+    setRutaNacSelect('');
     const match = FLETES_NACIONALES_COMPRAS.find(r => r.o === o && r.d === d);
     setFleteNac(match ? match.precio.toString() : "0");
+  };
+
+  const elegirRutaNac = val => {
+    setRutaNacSelect(val);
+    setOrigenFlete('');
+    setDestinoFlete('');
+    if (val === 'N/A' || val === '') { setFleteNac("0"); return; }
+    const r = RUTAS_FLETE_NAC.find(x => x.name === val);
+    if (r) setFleteNac(r.cost.toString());
   };
 
   return (
@@ -778,12 +801,18 @@ function BloqueCompra({
         </div>
       </div>
 
-      <div>
-        <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Flete Nac.</label>
+      <div className="space-y-2">
+        <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider">Flete Nac.</label>
+        <select value={rutaNacSelect} onChange={e => elegirRutaNac(e.target.value)}
+                className="w-full bg-black border border-gray-700 rounded-lg p-2 text-white font-bold text-[10px] outline-none truncate focus:border-white appearance-none">
+          <option value="">Ruta / Manual...</option>
+          <option value="N/A">N/A (Sin Flete)</option>
+          {RUTAS_FLETE_NAC.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
+        </select>
         <div className="relative">
           <span className="absolute left-2 top-2 text-gray-400 font-bold text-xs">$</span>
           <input type="number" value={fleteNac}
-                 onChange={e => { setFleteNac(e.target.value); setOrigenFlete(''); setDestinoFlete(''); }}
+                 onChange={e => { setFleteNac(e.target.value); setOrigenFlete(''); setDestinoFlete(''); setRutaNacSelect(''); }}
                  className="w-full bg-black border border-gray-700 rounded-lg p-2 pl-6 text-white font-bold text-sm outline-none focus:border-white" />
         </div>
       </div>
@@ -823,7 +852,7 @@ En `deploy/index.html`, entre los datos estáticos y `app.js`, agregar `calc.js`
 npx serve deploy
 ```
 
-Abrir `http://localhost:3000`, iniciar sesión, y confirmar en la consola del navegador que no hay errores y que `typeof BloqueCompra === 'function'` y `typeof calcularCotizacion === 'function'`.
+Abrir `http://localhost:3000`, iniciar sesión, y confirmar en la consola del navegador que no hay errores y que `typeof BloqueCompra === 'function'`, `typeof calcularCotizacion === 'function'` y `RUTAS_FLETE_NAC.length === 5`.
 
 - [ ] **Step 4: Commit**
 
@@ -1453,7 +1482,6 @@ En `deploy/js/app.js`, borrar estas declaraciones de estado y todo lo que las us
 - `compraDirecta`, `modoNuevoSurtido`, `contrato`, `pendientes`, `hasFetchedPendientes`, `cargandoPendientes`, `errorPendientes`, y la función `fetchPendientes` completa con su `useEffect`
 - `modoSimulador` y **todos** los estados con prefijo `sim` (`simPrecioVenta`, `simTcHoy`, `simDiasCobro`, `simFleteNac`, `simCruceInt`, `simAduanaMex`, `simAduanaUsa`, `simMerma`, `simManiobras`, `simPpProv`, `simPorcentajeFijacion`, `simFixPrice`, `simRutaNacSelect`, `simRutaIntSelect`, `simPrecioTonNacional`, `simPrecioMxnNacional`, `simTcSeguro`, `simPrecioTopeCompra`, `simUtilidadNeta`, `simStatus`, `simCargandoTC`), el segundo `useEffect` de cálculo y `obtenerTipoDeCambioSim`
 - `comprasTipo`, `intencionVentaModalidad`, `precioCompraMxnCompras`, `ivNacPrecioTotal`, `comprasProveedores` (se renombra), `cargas`, `proveedor`
-- `rutaNacSelect` — el flete nacional ahora se resuelve sólo por origen/destino en `BloqueCompra`, el selector de ruta con precios fijos desaparece
 - los derivados `tabPendientes`, `currentContratos`, `visualKg`, `visualLb`, `comprasTotalCargas`, `numCargas`, y el `useEffect` que corrige material/cliente contra pendientes
 
 Y agregar en su lugar:
@@ -1466,7 +1494,7 @@ Y agregar en su lugar:
   const [tarifario, setTarifario] = useState({ proveedor: '', origen: '', destino: '', equipo: '', tipo: '' });
 ```
 
-Los estados que **se conservan** tal cual: `usuario`, `errorLogin`, `credToken`, `cliente`, `material`, `destino`, `origenEmbarque`, `embalaje`, `negociacion`, `notas`, `porcentajeFijacion`, `fixPrice`, `tcHoy`, `diasCobro`, `fleteNac`, `cruceInt`, `aduanaMex`, `aduanaUsa`, `merma`, `maniobras`, `ppProv`, `capacidadCNT`, `rutaIntSelect`, `comprasOrigenFlete`, `comprasDestinoFlete`, `precioTonNacional`, `precioMxnNacional`, `maritimoRow`, `cargandoTC`, `guardando`, `mensajeExito`.
+Los estados que **se conservan** tal cual: `usuario`, `errorLogin`, `credToken`, `cliente`, `material`, `destino`, `origenEmbarque`, `embalaje`, `negociacion`, `notas`, `porcentajeFijacion`, `fixPrice`, `tcHoy`, `diasCobro`, `fleteNac`, `cruceInt`, `aduanaMex`, `aduanaUsa`, `merma`, `maniobras`, `ppProv`, `capacidadCNT`, `rutaNacSelect`, `rutaIntSelect`, `comprasOrigenFlete`, `comprasDestinoFlete`, `precioTonNacional`, `precioMxnNacional`, `maritimoRow`, `cargandoTC`, `guardando`, `mensajeExito`.
 
 - [ ] **Step 2: Sustituir los dos motores de cálculo por una llamada a calcularCotizacion**
 
@@ -1526,6 +1554,7 @@ Sustituir todo el contenido del `<div className="p-6 space-y-5 relative z-10">` 
             negociacion={negociacion} setNegociacion={setNegociacion}
             origenFlete={comprasOrigenFlete} setOrigenFlete={setComprasOrigenFlete}
             destinoFlete={comprasDestinoFlete} setDestinoFlete={setComprasDestinoFlete}
+            rutaNacSelect={rutaNacSelect} setRutaNacSelect={setRutaNacSelect}
             fleteNac={fleteNac} setFleteNac={setFleteNac}
             ppProv={ppProv} setPpProv={setPpProv}
             capKg={capKg}
