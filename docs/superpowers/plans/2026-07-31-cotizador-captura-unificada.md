@@ -18,7 +18,7 @@
 - Acento naranja `#ff6600` para Terrestre/Marítimo/Nacional; verde `#16a34a` para Inventario.
 - Constantes del motor, verbatim: `tasaRiesgoAnual = 0.15`, `margenExtra = 0.10`, `truncar = n => Math.trunc(n * 100) / 100`.
 - Capacidad por carga: terrestre `19500`, marítimo `capacidadCNT * 1000`, nacional e inventario `24500`. El flete nacional siempre se divide entre `24500` (es tarifa por carga), sin importar la modalidad.
-- Defaults internos no capturados en el formulario: `aduanaMex = "2308"`, `aduanaUsa = "65"`, `maniobras = "0.60"`, `merma = "0"`, `diasCobro = "0"`.
+- Defaults internos no capturados en el formulario: `aduanaMex = "2308"`, `aduanaUsa = "65"`, `maniobras = "0.60"`. Los defaults de los campos que sí se capturan no cambian: `porcentajeFijacion = "100"`, `fixPrice = "2550.00"`, `tcHoy = ""`, `diasCobro = "15"`, `fleteNac = "0"`, `cruceInt = "0"`, `merma = "1"`.
 - Los módulos puros (`calc.js`, `payload.js`) exportan con el patrón dual: `module.exports` si existe `module`, si no asignan a `globalThis`. Así el navegador los usa como globales y Vitest los carga con `createRequire`.
 
 ## Decisión que el spec dejó abierta
