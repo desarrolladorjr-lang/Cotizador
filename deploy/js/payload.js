@@ -32,7 +32,7 @@
       usuario: e.usuario,
       modalidad: ETIQUETA_MODALIDAD[e.modalidad],
       cliente: tieneVenta ? e.cliente : '',
-      proveedor: e.proveedores.map(r => r.proveedor).join(', '),
+      proveedor: e.proveedores.map(r => r.proveedor || (e.opcionesProveedor && e.opcionesProveedor[0]) || '').filter(Boolean).join(', '),
       cargas,
       material: e.material,
       destino: e.destino,

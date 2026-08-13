@@ -12,7 +12,7 @@ const RUTAS_FLETE_INT = [
 
 function VentaTerrestre({
   cliente, setCliente, opcionesCliente,
-  destino, setDestino, opcionesDestino,
+  destino, setDestino, opcionesDestino, destinoBloqueado,
   porcentajeFijacion, setPorcentajeFijacion,
   fixPrice, setFixPrice,
   diasCobro, setDiasCobro,
@@ -21,6 +21,8 @@ function VentaTerrestre({
   tcHoy, setTcHoy, tcSeguro, cargandoTC, onActualizarTC,
   rutaIntSelect, setRutaIntSelect,
   cruceInt, setCruceInt,
+  rutaNacSelect, setRutaNacSelect,
+  fleteNac, setFleteNac,
 }) {
   const selCls = "w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none focus:border-white transition-colors appearance-none";
 
@@ -57,21 +59,30 @@ function VentaTerrestre({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <div>
-          <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Flete Int.</label>
-          <select value={rutaIntSelect} onChange={e => elegirRuta(e.target.value)}
-                  className="w-full bg-black border border-gray-700 rounded-lg p-2 text-white font-bold text-[10px] outline-none truncate focus:border-white appearance-none">
-            <option value="">Ruta / Manual...</option>
-            <option value="N/A">N/A (Sin Flete)</option>
-            {RUTAS_FLETE_INT.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
-          </select>
-        </div>
-        <div className="relative">
-          <span className="absolute left-2 top-2 font-bold text-xs" style={{ color: '#ff6600' }}>$</span>
-          <input type="number" value={cruceInt}
-                 onChange={e => { setCruceInt(e.target.value); setRutaIntSelect(''); }}
-                 className="w-full bg-black border border-gray-700 rounded-lg p-2 pl-6 text-white font-bold text-sm outline-none focus:border-white" />
+      {/* Sección unificada de Fletes */}
+      <div className="bg-black p-3 rounded-xl border border-gray-700 space-y-2">
+        <div className="text-[10px] font-black uppercase tracking-wider text-gray-400">Fletes (Nacional e Internacional)</div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Flete Nac. (MXN)</label>
+            <div className="relative">
+              <span className="absolute left-2.5 top-2 text-gray-400 font-bold text-xs">$</span>
+              <input type="number" value={fleteNac}
+                     onChange={e => setFleteNac(e.target.value)}
+                     className="w-full bg-black border border-gray-700 rounded-lg p-2 pl-6 text-white font-bold text-sm outline-none focus:border-white" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Flete Int. (USD)</label>
+            <div className="relative">
+              <span className="absolute left-2.5 top-2 font-bold text-xs" style={{ color: '#ff6600' }}>$</span>
+              <input type="number" value={cruceInt}
+                     onChange={e => setCruceInt(e.target.value)}
+                     className="w-full bg-black border border-gray-700 rounded-lg p-2 pl-6 text-white font-bold text-sm outline-none focus:border-white" />
+            </div>
+          </div>
         </div>
       </div>
 

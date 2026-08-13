@@ -1,4 +1,4 @@
-const { useState, useEffect } = React;
+const { useState, useEffect, useMemo } = React;
 
 // La sesion es el id_token de Google, no el perfil: el backend valida el token y de ahi
 // saca el correo. Guardar solo el perfil dejaba la app "con sesion" tras recargar pero
@@ -81,6 +81,7 @@ function App() {
   const [comprasOrigenFlete, setComprasOrigenFlete] = useState('');
   const [comprasDestinoFlete, setComprasDestinoFlete] = useState('GRAL. ESCOBÉDO, NL');
 
+  const [precioKgNacional, setPrecioKgNacional] = useState("");
   const [precioTonNacional, setPrecioTonNacional] = useState("");
   const [precioMxnNacional, setPrecioMxnNacional] = useState("");
 
@@ -96,12 +97,39 @@ function App() {
   const modalidad  = destinoVenta === 'exportacion' ? modoExport : destinoVenta;
   const tieneVenta = modalidad !== '' && modalidad !== 'inventario';
 
-  // Cliente y destino son por-modalidad: los catalogos no se solapan entre hojas
-  // (mismo criterio que material/proveedor NO siguen, ver nota en CLAUDE.md).
-  const opcionesClienteActual =
-    modalidad === 'nacional'  ? optionsClientesNacional :
-    modalidad === 'terrestre' ? optionsClientesTerrestre :
-    modalidad === 'maritimo'  ? optionsClientesMaritimo : [];
+  const [proveedores, setProveedores] = useState([{ proveedor: '', cargas: '1' }]);
+  const [tarifario, setTarifario] = useState({ destino: '', origen: '', pol: '', proveedor: '', equipo: '', tipo: '' });
+
+  const [tarifarioVersion, setTarifarioVersion] = useState(0);
+
+  // Extrae todos los clientes únicos (Columna D) presentes en el tarifario dinámico activo
+  const opcionesClienteDinamicas = useMemo(() => {
+    const tarifario = (typeof window !== 'undefined' && Array.isArray(window.TARIFARIO_FLETES))
+      ? window.TARIFARIO_FLETES
+      : TARIFARIO_FLETES;
+    
+    const setClis = new Set();
+    // 1. Clientes de la Columna D del tarifario de fletes en Google Sheets
+    tarifario.forEach(r => {
+      if (r.cd) setClis.add(r.cd.trim());
+    });
+
+    // 2. Si es modalidad marítimo, incluye los clientes del catálogo marítimo de exportación
+    if (modalidad === 'maritimo') {
+      optionsClientesMaritimo.forEach(c => {
+        if (c) setClis.add(c.trim());
+      });
+    } else if (setClis.size === 0) {
+      optionsClientesNacional.forEach(c => {
+        if (c) setClis.add(c.trim());
+      });
+    }
+
+    return Array.from(setClis).sort();
+  }, [modalidad, tarifarioVersion]);
+
+  // Cliente y destino son por-modalidad
+  const opcionesClienteActual = opcionesClienteDinamicas;
 
   const opcionesDestinoActual =
     modalidad === 'nacional'  ? optionsDestinoNacional :
@@ -116,8 +144,248 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalidad]);
 
-  const [proveedores, setProveedores] = useState([{ proveedor: '', cargas: '1' }]);
-  const [tarifario, setTarifario] = useState({ proveedor: '', origen: '', destino: '', equipo: '', tipo: '' });
+  // Obtener destinos específicos del cliente seleccionado en el tarifario
+  const destinosFiltradosPorCliente = useMemo(() => {
+    if (!cliente || typeof window.obtenerDestinosPorCliente !== 'function') return [];
+    return window.obtenerDestinosPorCliente(cliente);
+  }, [cliente, tarifarioVersion]);
+
+  // Si hay destinos específicos para el cliente, se usan solo esos; de lo contrario, se usa el catálogo general
+  const opcionesDestinoNacionalEfectivas = useMemo(() => {
+    const listaBase = destinosFiltradosPorCliente.length > 0
+      ? destinosFiltradosPorCliente
+      : optionsDestinoNacional;
+    return typeof window.esDestinoNacional === 'function'
+      ? listaBase.filter(window.esDestinoNacional)
+      : listaBase.filter(d => !d.includes(', TX') && !d.includes(', KY') && !d.includes(', MS') && !d.includes(', MI') && !d.includes(', OHIO'));
+  }, [destinosFiltradosPorCliente]);
+
+  const opcionesDestinoTerrestreEfectivas =
+    destinosFiltradosPorCliente.length > 0
+      ? destinosFiltradosPorCliente
+      : optionsDestinoTerrestre;
+
+  const opcionesDestinoMaritimoEfectivas =
+    destinosFiltradosPorCliente.length > 0
+      ? destinosFiltradosPorCliente
+      : optionsDestinoMaritimo;
+
+  // Auto-llenado inmediato de Destino al seleccionar Cliente
+  useEffect(() => {
+    if (!cliente) return;
+    if (destinosFiltradosPorCliente.length > 0) {
+      setDestino(destinosFiltradosPorCliente[0]);
+      setComprasDestinoFlete(destinosFiltradosPorCliente[0]);
+    } else {
+      const clientNorm = cliente.trim().toUpperCase();
+      const destSugerido = window.CLIENTES_DESTINOS_MAP?.[clientNorm];
+      if (destSugerido) {
+        setDestino(destSugerido);
+        setComprasDestinoFlete(destSugerido);
+      }
+    }
+  }, [cliente]);
+
+  // Si la modalidad es Inventario, la bodega destino siempre es General Escobedo
+  useEffect(() => {
+    if (modalidad === 'inventario') {
+      setDestino('GRAL. ESCOBÉDO, NL');
+      setComprasDestinoFlete('GRAL. ESCOBÉDO, NL');
+    }
+  }, [modalidad]);
+
+  // Sincronización dinámica del tarifario desde Google Sheets (Apps Script)
+  useEffect(() => {
+    try {
+      const cache = localStorage.getItem('TARIFARIO_FLETES_CACHE');
+      if (cache) {
+        const parsed = JSON.parse(cache);
+        if (Array.isArray(parsed) && parsed.length >= 50 && typeof window.actualizarTarifarioDinamico === 'function') {
+          window.actualizarTarifarioDinamico(parsed);
+          setTarifarioVersion(v => v + 1);
+        } else {
+          localStorage.removeItem('TARIFARIO_FLETES_CACHE');
+        }
+      }
+    } catch (err) {}
+
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOX2dJUvvpRcDkHYstwnezDyyfeIpUtfdnpuwRtZxICOu2AorLT80PvO6LP7wudRGh_A/exec";
+    fetch(`${GOOGLE_SCRIPT_URL}?action=getTarifario`)
+      .then(res => res.json())
+      .then(res => {
+        if (res && res.status === 'success' && Array.isArray(res.data) && res.data.length > 0) {
+          if (typeof window.actualizarTarifarioDinamico === 'function') {
+            window.actualizarTarifarioDinamico(res.data);
+            localStorage.setItem('TARIFARIO_FLETES_CACHE', JSON.stringify(res.data));
+            setTarifarioVersion(v => v + 1);
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const [infoFleteResuelto, setInfoFleteResuelto] = useState(null);
+
+  // Los proveedores de la hoja CAT no tienen origen en el tarifario, así que su
+  // negociación sólo puede ser DIRECTO ENTREGA. Se fija sola al elegirlos.
+  useEffect(() => {
+    if (typeof window.esProveedorEntregaDirecta !== 'function') return;
+    const hayEntregaDirecta = proveedores.some(r => window.esProveedorEntregaDirecta(r.proveedor));
+    if (hayEntregaDirecta && negociacion !== 'DIRECTO ENTREGA') {
+      setNegociacion('DIRECTO ENTREGA');
+    }
+  }, [proveedores, negociacion]);
+
+  // Auto-cálculo de tarifas de flete (soporta rutas simples de 2 puntos y compuestas de 3 puntos)
+  useEffect(() => {
+    if (typeof window.resolverTarifaFlete !== 'function') return;
+
+    const proveedorNom = proveedores[0]?.proveedor || '';
+    const orig = comprasOrigenFlete || origenEmbarque || '';
+    const dest = modalidad === 'inventario' ? 'GRAL. ESCOBÉDO, NL' : (destino || comprasDestinoFlete || '');
+    const neg = modalidad === 'inventario' ? 'RECOLECCION MTY' : negociacion;
+
+    if (neg === 'DIRECTO ENTREGA') {
+      setFleteNac('0');
+      setCruceInt('0');
+      setInfoFleteResuelto({ costo: 0, moneda: 'MXP', desc: 'Directo entrega (Flete $0)', existe: true });
+      return;
+    }
+
+    // Si la venta está activa pero no se ha seleccionado Cliente o Destino
+    if (modalidad !== 'inventario' && (!cliente || !destino)) {
+      const tarifaCompra = proveedorNom ? window.resolverTarifaFlete({
+        origen: orig,
+        destino: 'GRAL. ESCOBÉDO, NL',
+        negociacion: 'RECOLECCION MTY',
+        clienteOrigen: proveedorNom,
+        clienteDestino: ''
+      }) : null;
+
+      if (neg === 'RECOLECCION MTY' || neg === 'RECOLECCION BMTY') {
+        if (tarifaCompra) {
+          setFleteNac(tarifaCompra.costo.toString());
+          setCruceInt('0');
+          setInfoFleteResuelto({ ...tarifaCompra, desc: `Flete Recolección Proveedor ➔ Bodega Mty ($${tarifaCompra.costo} MXN)`, existe: true });
+          return;
+        }
+      }
+
+      setFleteNac('0');
+      setCruceInt('0');
+      setInfoFleteResuelto({
+        costo: 0,
+        moneda: 'MXP',
+        desc: '⚠️ Selecciona Cliente y Destino para calcular la tarifa completa',
+        existe: false
+      });
+      return;
+    }
+
+    // 1. Tramo Compra (Proveedor -> Bodega Mty)
+    const tarifaCompra = window.resolverTarifaFlete({
+      origen: orig,
+      destino: 'GRAL. ESCOBÉDO, NL',
+      negociacion: 'RECOLECCION MTY',
+      clienteOrigen: proveedorNom,
+      clienteDestino: ''
+    });
+
+    // 2. Tramo Venta (Bodega Mty -> Cliente)
+    const tarifaVenta = cliente ? window.resolverTarifaFlete({
+      origen: 'GRAL. ESCOBÉDO, NL',
+      destino: dest,
+      negociacion: 'BMTY DESTINO',
+      clienteOrigen: '',
+      clienteDestino: cliente
+    }) : null;
+
+    // 3. Tramo Directo (Proveedor -> Cliente)
+    const tarifaDirecta = window.resolverTarifaFlete({
+      origen: orig,
+      destino: dest,
+      negociacion: neg,
+      clienteOrigen: proveedorNom,
+      clienteDestino: cliente
+    });
+
+    if (neg === 'RECOLECCION DIRECTA') {
+      if (tarifaDirecta) {
+        setInfoFleteResuelto({ ...tarifaDirecta, existe: true });
+        if (tarifaDirecta.moneda === 'MXP') { setFleteNac(tarifaDirecta.costo.toString()); setCruceInt('0'); }
+        else { setCruceInt(tarifaDirecta.costo.toString()); setFleteNac('0'); }
+      } else {
+        setFleteNac('0');
+        setCruceInt('0');
+        setInfoFleteResuelto({ costo: 0, moneda: 'MXP', desc: '⚠️ Ruta no registrada en el tarifario — Ingresa el flete manualmente', existe: false });
+      }
+    } else if (neg === 'RECOLECCION MTY' || neg === 'RECOLECCION BMTY' || modalidad === 'inventario') {
+      if (tarifaCompra) {
+        setInfoFleteResuelto({ ...tarifaCompra, existe: true });
+        if (tarifaCompra.moneda === 'MXP') { setFleteNac(tarifaCompra.costo.toString()); setCruceInt('0'); }
+        else { setCruceInt(tarifaCompra.costo.toString()); setFleteNac('0'); }
+      } else {
+        setFleteNac('0');
+        setCruceInt('0');
+        setInfoFleteResuelto({ costo: 0, moneda: 'MXP', desc: '⚠️ Ruta a Bodega Mty no registrada en el tarifario — Ingresa el flete manualmente', existe: false });
+      }
+    } else if (neg === 'BMTY ENTREGA' || neg === 'BMTY DESTINO') {
+      let sumNac = 0;
+      let hayTarifa = false;
+      let descPartes = [];
+
+      if (tarifaCompra && tarifaCompra.moneda === 'MXP') {
+        sumNac += tarifaCompra.costo;
+        hayTarifa = true;
+        descPartes.push(`Compra: $${tarifaCompra.costo}`);
+      }
+      if (tarifaVenta) {
+        if (tarifaVenta.moneda === 'USD') {
+          setCruceInt(tarifaVenta.costo.toString());
+          hayTarifa = true;
+          descPartes.push(`Venta: $${tarifaVenta.costo} USD`);
+        } else if (tarifaVenta.moneda === 'MXP') {
+          sumNac += tarifaVenta.costo;
+          hayTarifa = true;
+          descPartes.push(`Venta: $${tarifaVenta.costo} MXN`);
+        }
+      }
+
+      if (hayTarifa) {
+        setFleteNac(sumNac.toString());
+        setInfoFleteResuelto({
+          costo: sumNac,
+          moneda: 'MXP',
+          desc: `BMTY ENTREGA (${descPartes.join(' | ')})`,
+          existe: true
+        });
+      } else {
+        setFleteNac('0');
+        setCruceInt('0');
+        setInfoFleteResuelto({
+          costo: 0,
+          moneda: 'MXP',
+          desc: '⚠️ Ruta no registrada en el tarifario — Ingresa el flete manualmente',
+          existe: false
+        });
+      }
+    } else {
+      if (tarifaDirecta) {
+        setInfoFleteResuelto({ ...tarifaDirecta, existe: true });
+        if (tarifaDirecta.moneda === 'MXP') { setFleteNac(tarifaDirecta.costo.toString()); setCruceInt('0'); }
+        else { setCruceInt(tarifaDirecta.costo.toString()); setFleteNac('0'); }
+      } else {
+        setFleteNac('0');
+        setCruceInt('0');
+        setInfoFleteResuelto({
+          costo: 0,
+          moneda: 'MXP',
+          desc: '⚠️ Ruta no registrada en el tarifario — Ingresa el flete manualmente',
+          existe: false
+        });
+      }
+    }
+  }, [cliente, destino, negociacion, proveedores, comprasOrigenFlete, comprasDestinoFlete, origenEmbarque, modalidad, tcHoy]);
 
   // CONFIGURACIÓN GOOGLE SIGN-IN — load script only when no session
   useEffect(() => {
@@ -207,7 +475,8 @@ function App() {
     }
     const row = TARIFARIO_DATA.find(r =>
       r.p === tarifario.proveedor && r.o === tarifario.origen &&
-      r.pod === tarifario.destino && r.eq === tarifario.equipo &&
+      r.pod === tarifario.destino && (!tarifario.pol || r.pol === tarifario.pol) &&
+      r.eq === tarifario.equipo &&
       (tarifario.tipo === '' || r.tipo === tarifario.tipo));
     setMaritimoRow(row || null);
     if (row) {
@@ -266,7 +535,7 @@ function App() {
   const calculo = modalidad === '' ? CALCULO_VACIO : calcularCotizacion({
     modalidad, porcentajeFijacion, fixPrice, tcHoy, diasCobro,
     fleteNac, cruceInt, aduanaMex, aduanaUsa, merma, maniobras, ppProv,
-    capacidadCNT, precioTotalMxn: precioMxnNacional, cargasTotales,
+    capacidadCNT, precioKgMxn: precioKgNacional, precioTotalMxn: precioMxnNacional, cargasTotales,
   });
 
   const { tcSeguro, capKg, precioVenta, precioTopeCompra, utilidadNeta, status } = calculo;
@@ -300,7 +569,7 @@ function App() {
         credential: credToken,
         fecha: new Date().toLocaleDateString('es-MX'),
         usuario: usuario.email,
-        modalidad, cliente, proveedores,
+        modalidad, cliente, proveedores, opcionesProveedor: opcionesProveedorActual,
         material, destino, origenEmbarque,
         porcentajeFijacion, fixPrice, tcHoy,
         fleteNac, cruceInt, ppProv, notas,
@@ -363,7 +632,6 @@ function App() {
               Cotizador Sidell
             </h1>
           </div>
-          <span className="font-black bg-white px-2 py-1 rounded-md text-xs shadow-sm" style={{ color: '#ff6600' }}>PRO</span>
         </div>
 
         <div className="bg-gray-800 border-b border-gray-700 px-4 py-2 flex items-center justify-between text-xs">
@@ -387,10 +655,6 @@ function App() {
             opcionesMaterial={opcionesMaterialActual}
             embalaje={embalaje} setEmbalaje={setEmbalaje}
             negociacion={negociacion} setNegociacion={setNegociacion}
-            origenFlete={comprasOrigenFlete} setOrigenFlete={setComprasOrigenFlete}
-            destinoFlete={comprasDestinoFlete} setDestinoFlete={setComprasDestinoFlete}
-            rutaNacSelect={rutaNacSelect} setRutaNacSelect={setRutaNacSelect}
-            fleteNac={fleteNac} setFleteNac={setFleteNac}
             ppProv={ppProv} setPpProv={setPpProv}
             capKg={capKg}
           />
@@ -442,18 +706,22 @@ function App() {
 
           {modalidad === 'nacional' && (
             <VentaNacional
-              cliente={cliente} setCliente={setCliente} opcionesCliente={optionsClientesNacional}
-              destino={destino} setDestino={setDestino} opcionesDestino={optionsDestinoNacional}
-              precioTonMxn={precioTonNacional} setPrecioTonMxn={setPrecioTonNacional}
-              precioTotalMxn={precioMxnNacional} setPrecioTotalMxn={setPrecioMxnNacional}
+              cliente={cliente} setCliente={setCliente} opcionesCliente={opcionesClienteDinamicas}
+              destino={destino} setDestino={setDestino} opcionesDestino={opcionesDestinoNacionalEfectivas}
+              precioKgNacional={precioKgNacional} setPrecioKgNacional={setPrecioKgNacional}
+              setPrecioTonMxn={setPrecioTonNacional} setPrecioMxnNacional={setPrecioMxnNacional}
               cargasTotales={cargasTotales}
+              merma={merma} setMerma={setMerma}
+              rutaNacSelect={rutaNacSelect} setRutaNacSelect={setRutaNacSelect}
+              fleteNac={fleteNac} setFleteNac={setFleteNac}
+              infoFleteResuelto={infoFleteResuelto}
             />
           )}
 
           {modalidad === 'terrestre' && (
             <VentaTerrestre
-              cliente={cliente} setCliente={setCliente} opcionesCliente={optionsClientesTerrestre}
-              destino={destino} setDestino={setDestino} opcionesDestino={optionsDestinoTerrestre}
+              cliente={cliente} setCliente={setCliente} opcionesCliente={opcionesClienteDinamicas}
+              destino={destino} setDestino={setDestino} opcionesDestino={opcionesDestinoTerrestreEfectivas}
               porcentajeFijacion={porcentajeFijacion} setPorcentajeFijacion={setPorcentajeFijacion}
               fixPrice={fixPrice} setFixPrice={setFixPrice}
               diasCobro={diasCobro} setDiasCobro={setDiasCobro}
@@ -463,13 +731,15 @@ function App() {
               cargandoTC={cargandoTC} onActualizarTC={obtenerTipoDeCambio}
               rutaIntSelect={rutaIntSelect} setRutaIntSelect={setRutaIntSelect}
               cruceInt={cruceInt} setCruceInt={setCruceInt}
+              rutaNacSelect={rutaNacSelect} setRutaNacSelect={setRutaNacSelect}
+              fleteNac={fleteNac} setFleteNac={setFleteNac}
             />
           )}
 
           {modalidad === 'maritimo' && (
             <VentaMaritimo
-              cliente={cliente} setCliente={setCliente} opcionesCliente={optionsClientesMaritimo}
-              destino={destino} setDestino={setDestino} opcionesDestino={optionsDestinoMaritimo}
+              cliente={cliente} setCliente={setCliente} opcionesCliente={opcionesClienteDinamicas}
+              destino={destino} setDestino={setDestino} opcionesDestino={opcionesDestinoMaritimoEfectivas}
               origenEmbarque={origenEmbarque} setOrigenEmbarque={setOrigenEmbarque}
               opcionesOrigenEmbarque={[...new Set(TARIFARIO_DATA.map(r => r.o))].sort()}
               porcentajeFijacion={porcentajeFijacion} setPorcentajeFijacion={setPorcentajeFijacion}
@@ -484,16 +754,39 @@ function App() {
               maritimoRow={maritimoRow} setMaritimoRow={setMaritimoRow}
               cruceInt={cruceInt} setCruceInt={setCruceInt}
               sinTarifario={sinTarifario}
+              rutaNacSelect={rutaNacSelect} setRutaNacSelect={setRutaNacSelect}
+              fleteNac={fleteNac} setFleteNac={setFleteNac}
             />
           )}
 
           {modalidad === 'inventario' && (
-            <div className="text-center bg-black py-4 rounded-xl border border-green-700">
-              <label className="block text-[10px] font-black uppercase tracking-widest mb-1 text-green-400">Costo de la Compra</label>
-              <div className="text-3xl font-black text-white font-mono tracking-tight">
-                {fMxn((Number(ppProv) || 0) * cargasTotales * capKg)}
+            <div className="space-y-4">
+              <div className="text-center bg-black py-3 rounded-xl border border-green-700">
+                <label className="block text-[10px] font-black uppercase tracking-widest text-green-400">Inventario</label>
               </div>
-              <p className="text-[9px] text-gray-400 mt-1 uppercase font-bold tracking-wider">Sin venta ligada — no hay tope</p>
+
+              <div className="text-center">
+                <label className="block text-white text-xs font-black uppercase tracking-widest mb-2">
+                  PRECIO DE COMPRA (MXN x KG)
+                </label>
+                <div className="relative bg-black border-2 border-emerald-500 rounded-2xl p-3 shadow-lg">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={ppProv}
+                    onChange={e => setPpProv(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-transparent text-white font-black text-3xl text-center outline-none font-mono"
+                  />
+                </div>
+              </div>
+
+              <BloqueFleteNacional
+                fleteNac={fleteNac} setFleteNac={setFleteNac}
+                sinSelect={true}
+                infoFleteResuelto={infoFleteResuelto}
+              />
             </div>
           )}
 
@@ -509,8 +802,25 @@ function App() {
             <p className="text-[9px] text-gray-400 mt-1 uppercase font-bold tracking-wider">Límite para 0 ganancia</p>
           </div>
 
+          <div className="mt-4 text-center">
+            <label className="block text-white text-xs font-black uppercase tracking-widest mb-2">
+              ¿A CUÁNTO LO CERRASTE? (OFERTA)
+            </label>
+            <div className={`relative bg-black border-2 rounded-2xl p-3 shadow-lg transition-colors ${status === 'bad' ? 'border-red-500' : 'border-emerald-500'}`}>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-lg">$</span>
+              <input
+                type="number"
+                step="0.01"
+                value={ppProv}
+                onChange={e => setPpProv(e.target.value)}
+                placeholder="0.00"
+                className="w-full bg-transparent text-white font-black text-3xl text-center outline-none font-mono"
+              />
+            </div>
+          </div>
+
           <div className="mt-4">
-            <div className={`mt-4 p-3 rounded-xl text-[10px] uppercase tracking-widest font-black flex flex-col items-center justify-center gap-1.5 shadow-sm transition-colors ${status === 'bad' ? 'bg-red-900 text-red-400 border border-red-700' : status === 'warning' ? 'bg-yellow-900 text-yellow-400 border border-yellow-700' : 'bg-green-900 text-green-400 border border-green-700'}`}>
+            <div className={`p-3 rounded-xl text-[10px] uppercase tracking-widest font-black flex flex-col items-center justify-center gap-1.5 shadow-sm transition-colors ${status === 'bad' ? 'bg-red-900 text-red-400 border border-red-700' : status === 'warning' ? 'bg-yellow-900 text-yellow-400 border border-yellow-700' : 'bg-green-900 text-green-400 border border-green-700'}`}>
               {status === 'bad' && <div className="text-xs">⚠️ PÉRDIDA SEGURA</div>}
               {status === 'warning' && <div className="text-xs">⚠️ MARGEN RIESGOSO</div>}
               {status === 'good' && (

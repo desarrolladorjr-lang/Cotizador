@@ -151,6 +151,40 @@ function doPost(e) {
 
 function doGet(e) {
   try {
+    var action = e && e.parameter && e.parameter.action;
+
+    if (action === 'getTarifario') {
+      var ssFletes = SpreadsheetApp.openById('15HLYsai0BYgvZPe7v1PJIfzBsigNDX12wPS_HIaiBkk');
+      var sheetFletes = ssFletes.getSheets()[0];
+      if (sheetFletes) {
+        var data = sheetFletes.getDataRange().getValues();
+        var tarifas = [];
+        // La fila 0 contiene los encabezados.
+        // Col A (index 0): Proveedor / Cliente Origen (co)
+        // Col C (index 2): Origen (o)
+        // Col D (index 3): Cliente Destino (cd)
+        // Col F (index 5): Destino (d)
+        // Col G (index 6): Costo Ruta
+        // Col H (index 7): Moneda
+        for (var i = 1; i < data.length; i++) {
+          var row = data[i];
+          var co = String(row[0] || '').trim();
+          var o = String(row[2] || row[1] || '').trim();
+          var cd = String(row[3] || '').trim();
+          var d = String(row[5] || row[4] || '').trim();
+          var costoStr = String(row[6] || '').replace(/[\$,]/g, '').trim();
+          var costo = parseFloat(costoStr) || 0;
+          var moneda = String(row[7] || 'MXP').trim().toUpperCase();
+          if (co || cd || o || d) {
+            tarifas.push({ co: co, o: o, cd: cd, d: d, costo: costo, moneda: moneda });
+          }
+        }
+        return ContentService
+          .createTextOutput(JSON.stringify({ status: 'success', data: tarifas }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     var cache = CacheService.getScriptCache();
     var cached = cache.get('pendientes');
     if (cached) {

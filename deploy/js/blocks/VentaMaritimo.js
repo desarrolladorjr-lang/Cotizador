@@ -35,10 +35,11 @@ function DesgloseMaritimo({ row, tc, accent }) {
 
       <div className="h-px bg-gray-700 my-2"></div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-2 gap-1.5">
         <Celda label="Total AA"  valor={usd(d.totalAA)} accent={accent} />
         <Celda label="Arrastre"  valor={usd(d.arr)}     accent={accent} />
-        <Celda label="Arrastre + Despacho" valor={usd(d.total)} accent={accent} destacado />
+        <Celda label="Arrastre + Despacho" valor={usd(d.total)} accent={accent} />
+        <Celda label="Ocean + Arrastre + Despacho" valor={usd((row.of * numTc) + d.total)} accent={accent} destacado />
       </div>
 
       <div className="text-[8px] text-gray-600 font-bold leading-tight pt-1.5">Despacho convertido de MXN a T.C. banco</div>
@@ -61,80 +62,92 @@ function VentaMaritimo({
   maritimoRow, setMaritimoRow,
   cruceInt, setCruceInt,
   sinTarifario,
+  rutaNacSelect, setRutaNacSelect,
+  fleteNac, setFleteNac,
 }) {
   const selCls = "w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none focus:border-white transition-colors appearance-none";
-  const selMini = "w-full bg-black border border-gray-700 rounded-lg p-1.5 text-white font-bold text-[10px] outline-none truncate focus:border-white appearance-none";
+  const selMini = "w-full bg-black border border-gray-700 rounded-lg p-2.5 text-white font-bold text-sm outline-none truncate focus:border-white appearance-none";
 
   const t = tarifario;
-  const proveedores = [...new Set([...TARIFARIO_DATA.map(r => r.p), ...TARIFARIO_PROVEEDORES_EXTRA])].sort();
-  const origenes = t.proveedor ? [...new Set(TARIFARIO_DATA.filter(r => r.p === t.proveedor).map(r => r.o))].sort() : [];
-  const destinos = t.origen ? [...new Set(TARIFARIO_DATA.filter(r => r.p === t.proveedor && r.o === t.origen).map(r => r.pod))].sort() : [];
-  const equipos  = t.destino ? [...new Set(TARIFARIO_DATA.filter(r => r.p === t.proveedor && r.o === t.origen && r.pod === t.destino).map(r => r.eq))].sort() : [];
-  const filas    = t.equipo ? TARIFARIO_DATA.filter(r => r.p === t.proveedor && r.o === t.origen && r.pod === t.destino && r.eq === t.equipo) : [];
-  const tipos    = [...new Set(filas.filter(r => r.tipo !== null).map(r => r.tipo))].sort();
+  const destinos = [...new Set(TARIFARIO_DATA.map(r => r.pod))].sort();
+  const origenes = t.destino
+    ? [...new Set(TARIFARIO_DATA.filter(r => r.pod === t.destino).map(r => r.o))].sort()
+    : [];
+  const puertos = (t.destino && t.origen)
+    ? [...new Set(TARIFARIO_DATA.filter(r => r.pod === t.destino && r.o === t.origen).map(r => r.pol))].sort()
+    : [];
+  const proveedores = (t.destino && t.origen && t.pol)
+    ? [...new Set([...TARIFARIO_DATA.filter(r => r.pod === t.destino && r.o === t.origen && r.pol === t.pol).map(r => r.p), ...TARIFARIO_PROVEEDORES_EXTRA])].sort()
+    : (t.destino && t.origen)
+    ? [...new Set([...TARIFARIO_DATA.filter(r => r.pod === t.destino && r.o === t.origen).map(r => r.p), ...TARIFARIO_PROVEEDORES_EXTRA])].sort()
+    : TARIFARIO_PROVEEDORES_EXTRA;
+  const equipos = (t.destino && t.origen && t.proveedor)
+    ? [...new Set(TARIFARIO_DATA.filter(r => r.pod === t.destino && r.o === t.origen && (t.pol ? r.pol === t.pol : true) && r.p === t.proveedor).map(r => r.eq))].sort()
+    : [];
+  const filas = (t.destino && t.origen && t.proveedor && t.equipo)
+    ? TARIFARIO_DATA.filter(r => r.pod === t.destino && r.o === t.origen && (t.pol ? r.pol === t.pol : true) && r.p === t.proveedor && r.eq === t.equipo)
+    : [];
+  const tipos = [...new Set(filas.filter(r => r.tipo !== null).map(r => r.tipo))].sort();
 
   return (
     <div className="space-y-3 bg-gray-900 border border-gray-700 rounded-xl p-3">
       <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Venta — Marítimo</div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Cliente</label>
-          <select value={cliente} onChange={e => setCliente(e.target.value)} className={selCls + " truncate"}>
-            <option value="">— Cliente —</option>
-            {opcionesCliente.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Destino</label>
-          <select value={destino} onChange={e => setDestino(e.target.value)} className={selCls + " truncate"}>
-            <option value="">— Destino —</option>
-            {opcionesDestino.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-        </div>
-      </div>
-
       <div>
-        <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Origen Embarque</label>
-        <select value={origenEmbarque} onChange={e => setOrigenEmbarque(e.target.value)} className={selCls + " truncate"}>
-          <option value="">— Origen —</option>
-          {opcionesOrigenEmbarque.map(o => <option key={o} value={o}>{o}</option>)}
+        <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Cliente</label>
+        <select value={cliente} onChange={e => setCliente(e.target.value)} className={selCls + " truncate"}>
+          <option value="">— Cliente —</option>
+          {opcionesCliente.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
 
       <div className="space-y-1.5">
         <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider">Ocean Freight</label>
 
-        <select value={t.proveedor}
-                onChange={e => setTarifario({ proveedor: e.target.value, origen: '', destino: '', equipo: '', tipo: '' })}
+        {/* 1. Destino (POD) */}
+        <select value={t.destino}
+                onChange={e => setTarifario({ destino: e.target.value, origen: '', pol: '', proveedor: '', equipo: '', tipo: '' })}
                 className={selMini}>
-          <option value="">— Proveedor —</option>
-          {proveedores.map(p => <option key={p} value={p}>{p}</option>)}
+          <option value="">— Destino (POD) —</option>
+          {destinos.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
 
-        {sinTarifario && (
-          <p className="text-[9px] text-gray-500 leading-tight">Sin tarifario. Captura el ocean freight manual (USD) abajo; el despacho va en Aduana MX.</p>
-        )}
-
-        {!sinTarifario && t.proveedor && (
+        {/* 2. Origen */}
+        {t.destino && (
           <select value={t.origen}
-                  onChange={e => setTarifario({ ...t, origen: e.target.value, destino: '', equipo: '', tipo: '' })}
+                  onChange={e => setTarifario({ ...t, origen: e.target.value, pol: '', proveedor: '', equipo: '', tipo: '' })}
                   className={selMini}>
             <option value="">— Origen —</option>
             {origenes.map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         )}
 
-        {t.origen && (
-          <select value={t.destino}
-                  onChange={e => setTarifario({ ...t, destino: e.target.value, equipo: '', tipo: '' })}
+        {/* 3. Puerto (POL) - Columna D */}
+        {t.origen && puertos.length > 0 && (
+          <select value={t.pol}
+                  onChange={e => setTarifario({ ...t, pol: e.target.value, proveedor: '', equipo: '', tipo: '' })}
                   className={selMini}>
-            <option value="">— Destino —</option>
-            {destinos.map(d => <option key={d} value={d}>{d}</option>)}
+            <option value="">— Puerto de Salida (POL) —</option>
+            {puertos.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         )}
 
-        {t.destino && (
+        {/* 4. Proveedor */}
+        {t.origen && (
+          <select value={t.proveedor}
+                  onChange={e => setTarifario({ ...t, proveedor: e.target.value, equipo: '', tipo: '' })}
+                  className={selMini}>
+            <option value="">— Proveedor —</option>
+            {proveedores.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        )}
+
+        {sinTarifario && (
+          <p className="text-[9px] text-gray-500 leading-tight">Sin tarifario. Captura el ocean freight manual (USD) abajo; el despacho va en Aduana MX.</p>
+        )}
+
+        {/* 5. Equipo */}
+        {!sinTarifario && t.proveedor && (
           <select value={t.equipo}
                   onChange={e => setTarifario({ ...t, equipo: e.target.value, tipo: '' })}
                   className={selMini}>
@@ -143,6 +156,7 @@ function VentaMaritimo({
           </select>
         )}
 
+        {/* 6. Tipo */}
         {tipos.length > 0 && t.equipo && (
           <select value={t.tipo} onChange={e => setTarifario({ ...t, tipo: e.target.value })} className={selMini}>
             <option value="">— Tipo —</option>

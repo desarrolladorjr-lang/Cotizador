@@ -35,7 +35,7 @@
     const numFleteNac = num(e.fleteNac);
 
     // Se calcula también en nacional aunque el ingreso no lo use: viaja en el payload.
-    const precioVenta = tieneVenta
+    let precioVenta = tieneVenta
       ? Number((((num(e.porcentajeFijacion) / 100) * num(e.fixPrice)) / 1000).toFixed(5))
       : 0;
 
@@ -58,7 +58,10 @@
       capKg = KG_POR_CARGA.nacional;
       logKg = numFleteNac / KG_CARGA_FLETE_NAC;
       const cargas = num(e.cargasTotales) || 1;
-      ingresoKgMxn = num(e.precioTotalMxn) / (cargas * KG_POR_CARGA.nacional);
+      ingresoKgMxn = num(e.precioKgMxn) > 0
+        ? num(e.precioKgMxn)
+        : (num(e.precioVenta) > 0 ? num(e.precioVenta) : (num(e.precioTotalMxn) > 0 ? num(e.precioTotalMxn) / (cargas * KG_POR_CARGA.nacional) : 0));
+      precioVenta = ingresoKgMxn;
     } else {
       const colchon = ((numTcHoy * TASA_RIESGO_ANUAL / 365) * num(e.diasCobro)) + MARGEN_EXTRA;
       tcSeguro = numTcHoy - colchon;

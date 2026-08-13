@@ -1,14 +1,271 @@
-const optionsClientesTerrestre = ["OMC", "INTRAMETCO", "REGEN", "ALA GROUP", "CNA", "COREMET", "GMI", "GREEN METALS", "GWECO", "INTERNATIONAL MATERIALS", "NOVELIS", "ORYX STAINLESS", "REINOXMETAL", "TANGENT", "UCIN", "VENUS", "INFINITY METALS", "ROYCE", "SCHUPAN", "TEMPO", "WONYORK"];
-const optionsMaterialTerrestre = ["3003 BARE", "3003 CLIP CLEAN", "5000 ALUM W/POLY", "5052 BALES", "5052 BARE", "6063 BARE", "6063 PAINTED", "BERRY CANDY", "BIRCH CLIFF COOPER", "EC WIRE", "RAD CU TALK", "SS 304", "SS 430", "UBC", "ZINC DIE CAST"];
-const optionsDestinoTerrestre = ["Laredo, TX", "Michigan", "Russville, KY", "Alabama", "Texarkana, TX", "Otro..."];
-const optionsProveedorTerrestre = ["CALDERA", "CESAR D.", "DAVID B.", "ELIAS E.", "FRANCISCO C.", "HORACIO S.", "JAVIER V.", "JORGE G.", "JOSE A.", "JUAN CARLOS M.", "LALO RECICLE", "LUIS G.", "MA. ELENA M.", "PALOMO", "VALENTIN"];
+const MATERIALES_POR_CATEGORIA = {
+  "Aluminio": [
+    "ALUMINIO SERIE 1000",
+    "ALUMINIO 1070",
+    "ALUMINIO 1100",
+    "ALUMINIO 3003",
+    "RECORTES DE ALUMINIO 3003 CON SILICÓN",
+    "ALUMINIO SERIE 5000",
+    "ALUMINIO SERIE 5000 CON POLIETILENO",
+    "ALUMINIO 5052",
+    "ALUMINIO 5083",
+    "ALUMINIO MIXTO 5000-3000",
+    "ALUMINIO MIXTO 5000-6000",
+    "ALUMINIO 6061",
+    "ALUMINIO 6063 LIMPIO",
+    "ALUMINIO 6063 PINTADO",
+    "ALUMINIO 95/5",
+    "ALUMINIO TAINT TABOR",
+    "CHATARRA DE ALUMINIO",
+    "CHATARRA MLC",
+    "MACIZO",
+    "CABLE DE ALUMINIO EC",
+    "CABLE TRITURADO",
+    "REBABA DE ALUMINIO",
+    "RIN DE ALUMINIO",
+    "RIN DE ALUMINIO CHICO",
+    "RIN DE ALUMINIO GRANDE",
+    "RIN DE ALUMINIO CROMADO",
+    "RIN DE MOTO",
+    "RADIADORES DE ALUMINIO",
+    "PERFIL PEDACERÍA",
+    "SPRAY",
+    "TRASTE",
+    "TUBO",
+    "BOTE",
+    "UBC"
+  ],
+  "Cobre": [
+    "CABLE DE COBRE",
+    "COBRE DE 1RA",
+    "COBRE BRILLOSO",
+    "COBRE DE 2DA / BIRCH / CLIFF",
+    "COBRE ESTAÑADO",
+    "COBRE REBABA",
+    "VARILLAS DE COBRE",
+    "COBRE CANDY",
+    "RADIADORES DE COBRE/ALUMINIO",
+    "RADIADORES DE COBRE/BRONCE"
+  ],
+  "Bronce": [
+    "BRONCE AMARILLO",
+    "BRONCE REBABA",
+    "BRONCE ROJO"
+  ],
+  "Otros": [
+    "ACERO INOXIDABLE 304",
+    "ACERO INOXIDABLE 316",
+    "ACERO INOXIDABLE 430",
+    "REBABA DE ACERO INOXIDABLE 304",
+    "REBABA DE ACERO INOXIDABLE 430",
+    "REBABA DE ACERO",
+    "PLOMO BLANDO",
+    "ANTIMONIO",
+    "DIECAST DE ZINC",
+    "MAGNESIO",
+    "COMPRESORES",
+    "MATERIALES VARIOS",
+    "CHATARRA GENERAL"
+  ]
+};
 
-const optionsClientesMaritimo = ["ALA GROUP", "CNA", "COREMET", "GMI", "GREEN METALS", "GWECO", "IMI", "INTERNATIONAL MATERIALS", "MADHU", "NOVELIS", "OMC", "ORYX STAINLESS", "REINOXMETAL", "TANGENT", "TRADMET", "UCIN", "VENUS"];
-const optionsMaterialMaritimo = ["3003", "ALUMINUM SCRAP", "304 SCRAP", "ACERO INOXIDABLE AISI 304", "ALUMINIUM 3003 SILICON COATED CLIPS", "ALUMINIUM COPPER RADIATORS SCRAP TALK CLEAN", "ALUMINIUM TAINT TABOR", 'ALUMINUM CU RADIATORS "TALK"', "ALUMINUM SCRAP TENSE 1%", "BERRY CANDY", "BIRCH CLIFF", "CHATARRA DE ACERO INOXIDABLE AISI 304", "CHATARRA DE ACERO INOXIDABLE AISI 430", "CLEAN ZINC DIECAST", "COMPRESSORS", "EC WIRE SCRAP", "MG USADO", "MLC SCRAP", 'NO.2 COPPER SCRAP "BIRCH/CLIFF"', "SCRAP ALUMINUM 6063 - PAINT / MIX", "SEALED UNITS - IRON & STEEL COMPRESSOR SCRAP", "STAINLESS STEEL SCRAP AISI 304", "UBC", "VIRUTA DE ACERO INOXIDABLE AISI 430", "ZINC DIE CAST", "TANGENT", "NEW PRODUCTION ALUMINIUM RADIATORS"];
-const optionsDestinoMaritimo = ["ALGECIRAS", "BUSAN, KOREA", "CHENNAI PORT, INDIA", "DAMAIYU PORT, CHINA", "HARBOUR ROTTERDAM", "HOUSTON, TX", "LAEM CHABANG", "LIANHUASHAN, CHINA", "MUNDRA, INDIA", "NEW ORLEANS", "NHAVA SHEVA PORT", "OITA", "PORT QASIM, PAKISTAN", "SAN ROQUE, CÁDIZ", "SAVANNAH OR NEW ORLE", "ALTAMIRA, MX", "PUERTO DE BILBAO – E", "QASIM PORT, PAKISTAN", "YILPORT GEBZE TURKEY", "ANTWERP", "MUNDRA", "NHAVA SHEVA", "SANTOS, BZ", "LAREDO, TX", "MÉRIDA", "HUASHAN, CHINA", "JAPENESE PORT"];
-const optionsProveedorMaritimo = ["CESAR DELGADO GDL", "DAVID BORJA", "DOMINICAN REPUBLIC", "HORACIO SERVIN", "MEINSUR", "MEXICALI", "RAQSA", "SIDELL MTY", "TIJUANA", "JAVIER VILLAREAL"];
+const todosLosMateriales = Object.values(MATERIALES_POR_CATEGORIA).flat();
 
-const optionsClientesNacional = ["OMC", "INTRAMETCO", "REGEN", "ALA GROUP", "CNA", "COREMET", "GMI", "GREEN METALS", "GWECO", "INTERNATIONAL MATERIALS", "NOVELIS", "REINOXMETAL", "TANGENT", "UCIN", "VENUS", "INFINITY METALS", "ROYCE", "SCHUPAN", "TEMPO"];
-const optionsMaterialNacional = ["3003 BARE", "3003 CLIP CLEAN", "5052 BALES", "5052 BARE", "6063 BARE", "6063 PAINTED", "BERRY CANDY", "EC WIRE", "SS 304", "SS 430", "UBC", "ZINC DIE CAST", "RAD CU TALK", "BIRCH CLIFF COOPER"];
-const optionsDestinoNacional = ["Monterrey, NL", "Guadalajara, JAL", "Ciudad de México", "Querétaro, QRO", "Puebla, PUE", "Tijuana, BC", "Mexicali, BC", "Mérida, YUC", "Otro..."];
-const optionsProveedorNacional = ["CALDERA", "CESAR D.", "DAVID B.", "ELIAS E.", "FRANCISCO C.", "HORACIO S.", "JAVIER V.", "JORGE G.", "JOSE A.", "JUAN CARLOS M.", "LALO RECICLE", "LUIS G.", "MA. ELENA M.", "PALOMO", "VALENTIN"];
+const optionsMaterialTerrestre = todosLosMateriales;
+const optionsMaterialMaritimo  = todosLosMateriales;
+const optionsMaterialNacional   = todosLosMateriales;
+
+// Lista oficial de proveedores (Columna A del tarifario de fletes en Google Sheets)
+const listaProveedoresColumnaA = [
+  "BMTY",
+  "BRYANT CERVANTES",
+  "CESAR DELGADO",
+  "CESAR DELGADO AGS",
+  "DIEGO GARZA",
+  "EDUARDO PALOMO",
+  "ELIAS ESQUIVEL",
+  "FAGOR SLP",
+  "HIGINIO",
+  "HORACIO SERVIN",
+  "HUMBERTO SERVIN",
+  "JAVIER VILLARREAL",
+  "JERONIMO GENERAL METALES",
+  "JOSE LUIS MARTINEZ",
+  "JRG",
+  "LUIS TORRES",
+  "MEINSUR",
+  "METAL EUTECTIC",
+  "NOEMI",
+  "PACO MARTINEZ",
+  "RECICLE",
+  "RECIMETSA",
+  "TOÑO MORADO",
+  "TORIBIO",
+  "VALENTIN"
+];
+
+// Proveedores del bloque "PROVEEDORES ENT. DIR" de la hoja CAT. No aparecen en el
+// tarifario de fletes, asi que no tienen origen: la negociacion es siempre DIRECTO ENTREGA.
+// DIEGO GARZA queda fuera a proposito: si tiene origen en el tarifario (NASH TX).
+const listaProveedoresEntregaDirecta = [
+  "CALDERA",
+  "JORGE MEDINA",
+  "LUIS GARCÍA",
+  "MARIELENA MÉNDEZ"
+];
+
+function esProveedorEntregaDirecta(proveedor) {
+  if (!proveedor) return false;
+  const pNorm = proveedor.trim().toUpperCase();
+  return listaProveedoresEntregaDirecta.some(p => p.toUpperCase() === pNorm);
+}
+
+// Lista oficial de clientes (EXCLUSIVAMENTE Columna D del tarifario de fletes en Google Sheets)
+const listaClientesColumnaD = [
+  "ALUMINUM DYNAMICS MS",
+  "ALUMINUM DYNAMICS SLP",
+  "ALUMM",
+  "ARZYZ",
+  "ARZYZ NL",
+  "BMTY",
+  "CESAR GARZA",
+  "COMERCIALIZADORA REIN",
+  "EL TEJON",
+  "EL TEJON JAL",
+  "EL TEJON SLP",
+  "FAGOR RAMOS",
+  "FAGOR SLP",
+  "FAGOR TEPEJI",
+  "INTRAMETCO",
+  "JRG MTY",
+  "JRG SLP",
+  "JRG TEZO",
+  "LUIS TORRES",
+  "NIKKEI",
+  "OMC",
+  "RECICLE",
+  "RECIMETSA",
+  "REGEN",
+  "SCHUPAN",
+  "SCHUPAN MI",
+  "SCHUPAN OHIO",
+  "SIDELL USA",
+  "TEMPO",
+  "TEXARCANA",
+  "TEXARCANA LAR",
+  "TEXARCANA TX",
+  "TOBI"
+];
+
+// Alias para compatibilidad
+const listaClientesColumnaC = listaClientesColumnaD;
+
+// Lista oficial de destinos (Columna F del tarifario de fletes en Google Sheets)
+const listaDestinosColumnaF = [
+  "AGUASCALIENTES, AGS",
+  "APODACA, NL",
+  "CD.MITRAS, N.L.",
+  "COLUMBUS, MS",
+  "GRAL. ESCOBÉDO, NL",
+  "HUBBARD, OHIO",
+  "KALAMAZOO, MI",
+  "LA LADRILLERA, NL.",
+  "LAREDO, TX",
+  "NASH, TX",
+  "PESQUERÍA, NL",
+  "POZA RICA, VER.",
+  "RAMOS ARIZPE, COAH",
+  "RUSSELLVILLE, KY",
+  "SAN JOSE DEL VERDE, JAL",
+  "SAN LUIS POTOSÍ, SLP",
+  "TEPEJI, HIDALGO",
+  "TEXARKANA, TX",
+  "TEZOYUCA, EDOMEX",
+  "TLAJOMULCO DE ZUÑIGA, JAL",
+  "TLAQUEPAQUE, JAL"
+];
+
+// Alias para compatibilidad
+const listaDestinosColumnaD = listaDestinosColumnaF;
+
+function esDestinoNacional(destino) {
+  if (!destino) return false;
+  const dUpper = destino.toUpperCase();
+  const esInternacional =
+    dUpper.includes(', TX') ||
+    dUpper.includes(', KY') ||
+    dUpper.includes(', MS') ||
+    dUpper.includes(', MI') ||
+    dUpper.includes(', OHIO') ||
+    dUpper.includes('ALABAMA') ||
+    dUpper.includes('MICHIGAN') ||
+    dUpper.includes('USA') ||
+    dUpper.includes('KOREA') ||
+    dUpper.includes('CHINA') ||
+    dUpper.includes('INDIA') ||
+    dUpper.includes('PAKISTAN') ||
+    dUpper.includes('TURKEY') ||
+    dUpper.includes('ROTTERDAM') ||
+    dUpper.includes('ANTWERP') ||
+    dUpper.includes('CÁDIZ');
+  return !esInternacional;
+}
+
+function clienteTieneDestinoNacional(cliente) {
+  if (!cliente) return false;
+  const cNorm = cliente.trim().toUpperCase();
+  const clientesConDestinoNacionalList = [
+    "ALA GROUP", "ALRETECH", "ALUM POZA RICA", "ALUMINUM DYNAMICS CONSTRUCTION ENTRANCE",
+    "ARZYZ", "CNA", "COMERCIALIZADORA REIN", "COREMET", "CUPRITA", "EL TEJON", "GMI",
+    "GREEN METALS", "GWECO", "INFINITY METALS", "INTERNATIONAL MATERIALS", "INTRAMETCO",
+    "JRG", "METALES HAUS", "NASA", "NIKKEI", "NOVELIS", "OMC", "RECICLE", "RECIMETSA",
+    "RECMAT", "REGEN", "REINOXMETAL", "ROYCE", "SIDELL SCRAP", "TANGENT", "TOBI", "UCIN",
+    "VENUS", "WF TRADING"
+  ];
+  return clientesConDestinoNacionalList.includes(cNorm);
+}
+
+function esDestinoExportacion(destino) {
+  return !esDestinoNacional(destino);
+}
+
+function esClienteExportacion(cliente) {
+  if (!cliente) return false;
+  const cNorm = cliente.trim().toUpperCase();
+  const clientesExclusivamenteNacionales = [
+    "ALRETECH", "ALUM POZA RICA", "ARZYZ", "COMERCIALIZADORA REIN",
+    "CUPRITA", "EL TEJON", "JRG", "METALES HAUS", "NASA", "NIKKEI",
+    "RECICLE", "RECIMETSA", "RECMAT", "SIDELL SCRAP", "TOBI", "WF TRADING"
+  ];
+  return !clientesExclusivamenteNacionales.includes(cNorm);
+}
+
+if (typeof window !== 'undefined') {
+  window.MATERIALES_POR_CATEGORIA = MATERIALES_POR_CATEGORIA;
+  window.esDestinoNacional = esDestinoNacional;
+  window.esDestinoExportacion = esDestinoExportacion;
+  window.clienteTieneDestinoNacional = clienteTieneDestinoNacional;
+  window.esClienteNacional = clienteTieneDestinoNacional;
+  window.esClienteExportacion = esClienteExportacion;
+  window.esProveedorEntregaDirecta = esProveedorEntregaDirecta;
+  window.listaProveedoresEntregaDirecta = listaProveedoresEntregaDirecta;
+}
+
+// Exclusivamente los proveedores del Google Sheet (columna A + hoja CAT)
+const optionsProveedorTerrestre = [...listaProveedoresColumnaA, ...listaProveedoresEntregaDirecta];
+const optionsProveedorMaritimo  = [...listaProveedoresColumnaA, ...listaProveedoresEntregaDirecta];
+const optionsProveedorNacional   = [...listaProveedoresColumnaA, ...listaProveedoresEntregaDirecta];
+
+// Clientes en Venta Terrestre (Exportación)
+const optionsClientesTerrestre = [...listaClientesColumnaD].sort();
+
+// Clientes en Venta Marítimo (Columna D)
+const optionsClientesMaritimo  = [...listaClientesColumnaD].sort();
+
+// Clientes en Venta Nacional (Columna D)
+const optionsClientesNacional = [...listaClientesColumnaD].sort();
+
+// Destinos por modalidad (Nacional vs. Exportación)
+const optionsDestinoNacional   = listaDestinosColumnaD.filter(esDestinoNacional);
+const optionsDestinoTerrestre = listaDestinosColumnaD.filter(esDestinoExportacion);
+const optionsDestinoMaritimo  = ["ALGECIRAS", "BUSAN, KOREA", "CHENNAI PORT, INDIA", "DAMAIYU PORT, CHINA", "HARBOUR ROTTERDAM", "HOUSTON, TX", "LAEM CHABANG", "LIANHUASHAN, CHINA", "MUNDRA, INDIA", "NEW ORLEANS", "NHAVA SHEVA PORT", "OITA", "PORT QASIM, PAKISTAN", "SAN ROQUE, CÁDIZ", "SAVANNAH OR NEW ORLE", "PUERTO DE BILBAO – E", "QASIM PORT, PAKISTAN", "YILPORT GEBZE TURKEY", "ANTWERP", "MUNDRA", "NHAVA SHEVA", "SANTOS, BZ", "LAREDO, TX", "HUASHAN, CHINA", "JAPENESE PORT"].filter(esDestinoExportacion);
