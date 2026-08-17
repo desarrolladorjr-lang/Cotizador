@@ -117,7 +117,6 @@ function resolverTarifaFlete({ origen, destino, negociacion, clienteOrigen, clie
   const negNorm = normalizarTextoFlete(negociacion || '');
 
   const BODEGA_MTY = "GRAL. ESCOBÉDO, NL";
-  const LAREDO_TX = "LAREDO, TX";
 
   // REGLA NUEVA: "Directo entrega" -> Flete es $0
   if (negNorm.includes('DIRECTO ENTREGA') || negNorm === 'DIRECTO ENTREGA') {
@@ -156,8 +155,6 @@ function resolverTarifaFlete({ origen, destino, negociacion, clienteOrigen, clie
     dConsulta = normalizarTextoFlete(BODEGA_MTY);
   } else if (negNorm.includes('BMTY ENTREGA') || negNorm.includes('BMTY DESTINO') || negNorm.includes('BMTY ENTRE')) {
     oConsulta = normalizarTextoFlete(BODEGA_MTY);
-  } else if (negNorm.includes('LAREDO')) {
-    dConsulta = normalizarTextoFlete(LAREDO_TX);
   } else if (negNorm.includes('CONCEPTO 2')) {
     oConsulta = normalizarTextoFlete(BODEGA_MTY);
   }

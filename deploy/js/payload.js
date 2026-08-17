@@ -5,8 +5,11 @@
     terrestre: 'Terrestre',
     maritimo: 'Marítimo',
     nacional: 'Nacional',
-    inventario: 'Compras',
+    inventario: 'Inventarios',
   };
+
+  // Bodega Monterrey: destinatario de todo lo que se compra para inventario.
+  const CLIENTE_INVENTARIOS = 'BMTY';
 
   const ETIQUETA_STATUS = {
     good: 'Aprobado',
@@ -26,27 +29,40 @@
     const cargas = e.proveedores.reduce((sum, r) => sum + num(r.cargas), 0);
     const kgTotales = cargas * c.capKg;
 
+    const proveedor = e.proveedores
+      .map(r => r.proveedor || (e.opcionesProveedor && e.opcionesProveedor[0]) || '')
+      .filter(Boolean)
+      .join(', ');
+
     return {
       credential: e.credential,
       fecha: e.fecha,
       usuario: e.usuario,
       modalidad: ETIQUETA_MODALIDAD[e.modalidad],
-      cliente: tieneVenta ? e.cliente : '',
-      proveedor: e.proveedores.map(r => r.proveedor || (e.opcionesProveedor && e.opcionesProveedor[0]) || '').filter(Boolean).join(', '),
+      // En Inventarios no hay comprador: el material entra a bodega propia, asi que
+      // la columna CLIENTE va marcada con BMTY en vez de quedar en blanco.
+      cliente: tieneVenta ? e.cliente : CLIENTE_INVENTARIOS,
+      proveedor,
       cargas,
+      kgOc: Number(kgTotales.toFixed(2)),
       material: e.material,
-      destino: e.destino,
+      // En Compras no hay destino de venta: la hoja guarda el destino del flete.
+      destino: e.modalidad === 'inventario' ? (e.destinoFlete || '') : e.destino,
       origenEmbarque: e.modalidad === 'maritimo' ? e.origenEmbarque : '',
       porcentajeFijacion: num(e.porcentajeFijacion),
       fixPrice: num(e.fixPrice),
       precioVenta: c.precioVenta,
       tcHoy: num(e.tcHoy),
       tcSeguro: Number(c.tcSeguro.toFixed(2)),
+      diasCredito: tieneVenta && e.modalidad !== 'nacional' ? num(e.diasCobro) : 0,
+      merma: num(e.merma),
       fleteNac: num(e.fleteNac),
-      // El cruce internacional es una fila del tarifario marítimo (o del flete
-      // internacional terrestre); en Nacional/Inventario no tiene sentido y puede
-      // quedar en el estado de una modalidad anterior si el usuario cambió de venta.
-      cruceInt: (e.modalidad === 'nacional' || e.modalidad === 'inventario') ? 0 : num(e.cruceInt),
+      // Un solo campo de captura (cruceInt) alimenta dos columnas de la hoja:
+      // en terrestre es el flete internacional, en marítimo es el paquete
+      // ocean freight + arrastre + despacho. En Nacional/Inventario no aplica y
+      // puede traer un valor viejo si el usuario cambió de modalidad.
+      fleteInt: e.modalidad === 'terrestre' ? num(e.cruceInt) : 0,
+      oceans: e.modalidad === 'maritimo' ? num(e.cruceInt) : 0,
       precioTopeCompra: Number(c.precioTopeCompra.toFixed(2)),
       ppProv: Number(num(e.ppProv).toFixed(2)),
       status: ETIQUETA_STATUS[c.status] ?? 'Pérdida',

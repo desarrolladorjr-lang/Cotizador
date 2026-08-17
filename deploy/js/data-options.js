@@ -160,6 +160,82 @@ const listaClientesColumnaD = [
 // Alias para compatibilidad
 const listaClientesColumnaC = listaClientesColumnaD;
 
+// Clientes que solo existen para exportacion (segunda columna del sheet, todos "i")
+const listaClientesExportacionExtra = [
+  "ALA IBNTERNATIONAL",
+  "ARDOUR WORLD LIMITED",
+  "CNA",
+  "COREMET TRADING, INC",
+  "GMI",
+  "GREEN METALS",
+  "INTERNATIONAL MATERIALS",
+  "KATAMAN",
+  "MADHU MULTI TRADING",
+  "NOVELIS",
+  "ORYX",
+  "REINOXMETAL",
+  "ROYCE CORP",
+  "TANGENT",
+  "UCIN"
+];
+
+// Clasificacion i/n del sheet: "i" = internacional (exportacion), "n" = nacional.
+// Las claves van normalizadas (trim + mayusculas).
+const CLIENTES_TIPO = {
+  // Internacionales (exportacion: maritimo y terrestre)
+  "ALUMINUM DYNAMICS MS": "i",
+  "INTRAMETCO": "i",
+  "OMC": "i",
+  "REGEN": "i",
+  "SCHUPAN": "i",
+  "SCHUPAN MI": "i",
+  "SCHUPAN OHIO": "i",
+  "SIDELL USA": "i",
+  "TEMPO": "i",
+  "TEXARCANA": "i",
+  "TEXARCANA LAR": "i",
+  "TEXARCANA TX": "i",
+  // Nacionales
+  "ALUMINUM DYNAMICS SLP": "n",
+  "ALUMM": "n",
+  "ARZYZ": "n",
+  "ARZYZ NL": "n",
+  "BMTY": "n",
+  "CESAR GARZA": "n",
+  "COMERCIALIZADORA REIN": "n",
+  "EL TEJON": "n",
+  "EL TEJON JAL": "n",
+  "EL TEJON SLP": "n",
+  "FAGOR RAMOS": "n",
+  "FAGOR SLP": "n",
+  "FAGOR TEPEJI": "n",
+  "JRG MTY": "n",
+  "JRG SLP": "n",
+  "JRG TEZO": "n",
+  "LUIS TORRES": "n",
+  "NIKKEI": "n",
+  "RECICLE": "n",
+  "RECIMETSA": "n",
+  "TOBI": "n"
+};
+
+// Los extras de exportacion se marcan "i" sin repetirlos a mano
+listaClientesExportacionExtra.forEach(c => { CLIENTES_TIPO[c.trim().toUpperCase()] = "i"; });
+
+function tipoCliente(cliente) {
+  if (!cliente) return null;
+  return CLIENTES_TIPO[cliente.trim().toUpperCase()] || null;
+}
+
+// Sin clasificacion => se deja pasar en ambas modalidades (no perder clientes nuevos del tarifario)
+function esClienteExportacion(cliente) {
+  return tipoCliente(cliente) !== "n";
+}
+
+function esClienteNacional(cliente) {
+  return tipoCliente(cliente) !== "i";
+}
+
 // Lista oficial de destinos (Columna F del tarifario de fletes en Google Sheets)
 const listaDestinosColumnaF = [
   "AGUASCALIENTES, AGS",
@@ -229,24 +305,15 @@ function esDestinoExportacion(destino) {
   return !esDestinoNacional(destino);
 }
 
-function esClienteExportacion(cliente) {
-  if (!cliente) return false;
-  const cNorm = cliente.trim().toUpperCase();
-  const clientesExclusivamenteNacionales = [
-    "ALRETECH", "ALUM POZA RICA", "ARZYZ", "COMERCIALIZADORA REIN",
-    "CUPRITA", "EL TEJON", "JRG", "METALES HAUS", "NASA", "NIKKEI",
-    "RECICLE", "RECIMETSA", "RECMAT", "SIDELL SCRAP", "TOBI", "WF TRADING"
-  ];
-  return !clientesExclusivamenteNacionales.includes(cNorm);
-}
-
 if (typeof window !== 'undefined') {
   window.MATERIALES_POR_CATEGORIA = MATERIALES_POR_CATEGORIA;
   window.esDestinoNacional = esDestinoNacional;
   window.esDestinoExportacion = esDestinoExportacion;
   window.clienteTieneDestinoNacional = clienteTieneDestinoNacional;
-  window.esClienteNacional = clienteTieneDestinoNacional;
+  window.esClienteNacional = esClienteNacional;
   window.esClienteExportacion = esClienteExportacion;
+  window.CLIENTES_TIPO = CLIENTES_TIPO;
+  window.tipoCliente = tipoCliente;
   window.esProveedorEntregaDirecta = esProveedorEntregaDirecta;
   window.listaProveedoresEntregaDirecta = listaProveedoresEntregaDirecta;
 }
@@ -256,14 +323,17 @@ const optionsProveedorTerrestre = [...listaProveedoresColumnaA, ...listaProveedo
 const optionsProveedorMaritimo  = [...listaProveedoresColumnaA, ...listaProveedoresEntregaDirecta];
 const optionsProveedorNacional   = [...listaProveedoresColumnaA, ...listaProveedoresEntregaDirecta];
 
-// Clientes en Venta Terrestre (Exportación)
-const optionsClientesTerrestre = [...listaClientesColumnaD].sort();
+// Catalogo completo: Columna D + los clientes que solo existen para exportacion
+const listaClientesTodos = [...listaClientesColumnaD, ...listaClientesExportacionExtra];
 
-// Clientes en Venta Marítimo (Columna D)
-const optionsClientesMaritimo  = [...listaClientesColumnaD].sort();
+// Clientes en Venta Terrestre (Exportación) — solo los marcados "i"
+const optionsClientesTerrestre = listaClientesTodos.filter(esClienteExportacion).sort();
 
-// Clientes en Venta Nacional (Columna D)
-const optionsClientesNacional = [...listaClientesColumnaD].sort();
+// Clientes en Venta Marítimo (Exportación) — solo los marcados "i"
+const optionsClientesMaritimo  = listaClientesTodos.filter(esClienteExportacion).sort();
+
+// Clientes en Venta Nacional — solo los marcados "n"
+const optionsClientesNacional = listaClientesTodos.filter(esClienteNacional).sort();
 
 // Destinos por modalidad (Nacional vs. Exportación)
 const optionsDestinoNacional   = listaDestinosColumnaD.filter(esDestinoNacional);

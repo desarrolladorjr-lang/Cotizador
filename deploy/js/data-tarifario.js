@@ -1,3 +1,8 @@
+// Fecha de la última carga de tarifas marítimas (ISO). ACTUALIZAR A MANO cada vez que
+// se toquen TARIFARIO_DATA o DESPACHO_POR_POL: se muestra en el desglose para que el
+// operador sepa qué tan fresco es el número que está cotizando.
+const TARIFARIO_ACTUALIZADO = '2026-06-30';
+
 // Proveedores sin tarifas cargadas: aparecen en el dropdown pero no tienen rutas aún
 const TARIFARIO_PROVEEDORES_EXTRA = ['RAD', 'MAERSK', 'CMA CGM'];
 

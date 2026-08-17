@@ -43,6 +43,7 @@ function App() {
   const [errorLogin, setErrorLogin] = useState('');
 
   const [guardando, setGuardando] = useState(false);
+  const [confirmarPerdida, setConfirmarPerdida] = useState(false);
   const [mensajeExito, setMensajeExito] = useState('');
   const [cargandoTC, setCargandoTC] = useState(false);
 
@@ -64,7 +65,6 @@ function App() {
   const [aduanaUsa, setAduanaUsa] = useState("65");
 
   const [merma, setMerma] = useState("1");
-  const [maniobras, setManiobras] = useState("0.60");
   const [ppProv, setPpProv] = useState("40.00");
 
   const [material, setMaterial] = useState('UBC');
@@ -97,6 +97,11 @@ function App() {
   const modalidad  = destinoVenta === 'exportacion' ? modoExport : destinoVenta;
   const tieneVenta = modalidad !== '' && modalidad !== 'inventario';
 
+  // Inventario siempre entra a la bodega de MTY, aunque la negociación no se capture.
+  const negociacionEfectiva = modalidad === 'inventario' ? 'RECOLECCION MTY' : negociacion;
+  // Las maniobras (0.60 x kg) solo se cobran si la carga pasa por esa bodega.
+  const maniobras = maniobrasPorNegociacion(negociacionEfectiva);
+
   const [proveedores, setProveedores] = useState([{ proveedor: '', cargas: '1' }]);
   const [tarifario, setTarifario] = useState({ destino: '', origen: '', pol: '', proveedor: '', equipo: '', tipo: '' });
 
@@ -114,18 +119,23 @@ function App() {
       if (r.cd) setClis.add(r.cd.trim());
     });
 
-    // 2. Si es modalidad marítimo, incluye los clientes del catálogo marítimo de exportación
-    if (modalidad === 'maritimo') {
-      optionsClientesMaritimo.forEach(c => {
-        if (c) setClis.add(c.trim());
-      });
-    } else if (setClis.size === 0) {
-      optionsClientesNacional.forEach(c => {
-        if (c) setClis.add(c.trim());
-      });
-    }
+    // 2. Catálogo fijo de la modalidad (nacional = "n", exportación = "i")
+    const catalogoModalidad =
+      modalidad === 'nacional'  ? optionsClientesNacional :
+      modalidad === 'terrestre' ? optionsClientesTerrestre :
+      modalidad === 'maritimo'  ? optionsClientesMaritimo : [];
+    catalogoModalidad.forEach(c => {
+      if (c) setClis.add(c.trim());
+    });
 
-    return Array.from(setClis).sort();
+    // 3. Un cliente "n" no puede aparecer en exportación ni un "i" en nacional
+    const filtroModalidad =
+      modalidad === 'nacional' ? window.esClienteNacional :
+      (modalidad === 'terrestre' || modalidad === 'maritimo') ? window.esClienteExportacion :
+      null;
+
+    const lista = Array.from(setClis);
+    return (typeof filtroModalidad === 'function' ? lista.filter(filtroModalidad) : lista).sort();
   }, [modalidad, tarifarioVersion]);
 
   // Cliente y destino son por-modalidad
@@ -170,21 +180,32 @@ function App() {
       ? destinosFiltradosPorCliente
       : optionsDestinoMaritimo;
 
-  // Auto-llenado inmediato de Destino al seleccionar Cliente
+  // Auto-llenado inmediato de Destino al seleccionar Cliente.
+  // En maritimo el destino de venta es el POD del tarifario, no el destino del flete
+  // nacional: ahi solo se auto-llena el tramo carretero.
   useEffect(() => {
     if (!cliente) return;
+    const esMaritimo = modalidad === 'maritimo';
     if (destinosFiltradosPorCliente.length > 0) {
-      setDestino(destinosFiltradosPorCliente[0]);
+      if (!esMaritimo) setDestino(destinosFiltradosPorCliente[0]);
       setComprasDestinoFlete(destinosFiltradosPorCliente[0]);
     } else {
       const clientNorm = cliente.trim().toUpperCase();
       const destSugerido = window.CLIENTES_DESTINOS_MAP?.[clientNorm];
       if (destSugerido) {
-        setDestino(destSugerido);
+        if (!esMaritimo) setDestino(destSugerido);
         setComprasDestinoFlete(destSugerido);
       }
     }
   }, [cliente]);
+
+  // El bloque maritimo no tiene selector de Destino propio: el destino de venta es el
+  // POD elegido en el tarifario. Sin este puente `destino` se quedaba vacio y el boton
+  // "Guardar Trato" nunca se habilitaba en exportacion maritima.
+  useEffect(() => {
+    if (modalidad !== 'maritimo') return;
+    setDestino(tarifario.destino || '');
+  }, [modalidad, tarifario.destino]);
 
   // Si la modalidad es Inventario, la bodega destino siempre es General Escobedo
   useEffect(() => {
@@ -209,7 +230,7 @@ function App() {
       }
     } catch (err) {}
 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOX2dJUvvpRcDkHYstwnezDyyfeIpUtfdnpuwRtZxICOu2AorLT80PvO6LP7wudRGh_A/exec";
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6FL__1-H4xOrjfu1x4kXwcBRUlAGy-YynrNrcxHk9qmzB4es3Op0Ci8_y6vM4zIBm/exec";
     fetch(`${GOOGLE_SCRIPT_URL}?action=getTarifario`)
       .then(res => res.json())
       .then(res => {
@@ -243,7 +264,7 @@ function App() {
     const proveedorNom = proveedores[0]?.proveedor || '';
     const orig = comprasOrigenFlete || origenEmbarque || '';
     const dest = modalidad === 'inventario' ? 'GRAL. ESCOBÉDO, NL' : (destino || comprasDestinoFlete || '');
-    const neg = modalidad === 'inventario' ? 'RECOLECCION MTY' : negociacion;
+    const neg = negociacionEfectiva;
 
     if (neg === 'DIRECTO ENTREGA') {
       setFleteNac('0');
@@ -538,7 +559,7 @@ function App() {
     capacidadCNT, precioKgMxn: precioKgNacional, precioTotalMxn: precioMxnNacional, cargasTotales,
   });
 
-  const { tcSeguro, capKg, precioVenta, precioTopeCompra, utilidadNeta, status } = calculo;
+  const { tcSeguro, capKg, precioVenta, precioTopeCompra, utilidadNeta, utilidadPorKg, status } = calculo;
 
   // La compra se captura antes de conocer el destino, asi que los catalogos no se
   // filtran por modalidad: el material se compra en Mexico vaya a donde vaya.
@@ -550,7 +571,16 @@ function App() {
     ...optionsProveedorTerrestre, ...optionsProveedorMaritimo, ...optionsProveedorNacional,
   ])].sort();
 
-  const handleGuardarCotizacion = async () => {
+  // Cerrar arriba del tope de compra es pérdida segura. El color rojo solo se ve si
+  // el operador está mirando la tarjeta, así que el guardado pide confirmación
+  // explícita antes de mandar el trato al Sheet.
+  const handleGuardarCotizacion = async ({ confirmadoPerdida = false } = {}) => {
+    if (status === 'bad' && !confirmadoPerdida) {
+      setConfirmarPerdida(true);
+      return;
+    }
+    setConfirmarPerdida(false);
+
     // El backend rechaza los tokens vencidos, y el POST va en no-cors: si dejaramos
     // salir uno vencido, la respuesta seria opaca y el usuario veria el check verde
     // sin que se guardara nada. Se corta aqui y se pide entrar de nuevo.
@@ -563,7 +593,7 @@ function App() {
 
     setGuardando(true);
     try {
-      const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxOX2dJUvvpRcDkHYstwnezDyyfeIpUtfdnpuwRtZxICOu2AorLT80PvO6LP7wudRGh_A/exec";
+      const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6FL__1-H4xOrjfu1x4kXwcBRUlAGy-YynrNrcxHk9qmzB4es3Op0Ci8_y6vM4zIBm/exec";
 
       const payload = construirPayload({
         credential: credToken,
@@ -572,24 +602,49 @@ function App() {
         modalidad, cliente, proveedores, opcionesProveedor: opcionesProveedorActual,
         material, destino, origenEmbarque,
         porcentajeFijacion, fixPrice, tcHoy,
-        fleteNac, cruceInt, ppProv, notas,
+        fleteNac, cruceInt, ppProv, notas, diasCobro, merma,
         embalaje, negociacion,
         origenFlete: comprasOrigenFlete,
         destinoFlete: comprasDestinoFlete,
         calculo,
       });
 
-      await fetch(GOOGLE_SCRIPT_URL, {
+      // text/plain, no application/json: asi el POST es una "simple request" y el
+      // navegador no manda preflight (Apps Script no responde OPTIONS). El cuerpo
+      // sigue llegando como JSON a e.postData.contents.
+      //
+      // Sin mode:'no-cors' a proposito: con respuesta opaca el catch nunca ve nada
+      // y la app cantaba "guardado" aunque el script devolviera un error.
+      const respuesta = await fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
+
+      // Apps Script responde JSON, pero cuando Google se cae a medias (o la red
+      // corta el redirect a googleusercontent) llega una pagina HTML de error que
+      // el script nunca vio: en el registro de ejecuciones no aparece nada. Eso
+      // reventaba en `.json()` con "Unexpected token '<'", un mensaje que no dice
+      // nada y, peor, deja sin saber si la fila entro o no.
+      const textoRespuesta = await respuesta.text();
+      let resultado;
+      try {
+        resultado = JSON.parse(textoRespuesta);
+      } catch (_) {
+        console.error('Respuesta no-JSON del script:', respuesta.status, textoRespuesta.slice(0, 500));
+        throw new Error(
+          'Google respondio una pagina en vez de datos (HTTP ' + respuesta.status + '). ' +
+          'Revisa la hoja antes de reintentar: la captura pudo haberse guardado.'
+        );
+      }
+      if (resultado.error) throw new Error(resultado.error);
 
       setMensajeExito('✅ ¡Trato guardado exitosamente!');
       setTimeout(() => setMensajeExito(''), 3000);
     } catch (error) {
       console.error(error);
+      setMensajeExito('❌ No se guardó: ' + (error.message || error));
+      setTimeout(() => setMensajeExito(''), 8000);
     } finally {
       setGuardando(false);
     }
@@ -843,7 +898,7 @@ function App() {
           </div>
 
           <button
-            onClick={handleGuardarCotizacion}
+            onClick={() => handleGuardarCotizacion()}
             disabled={guardando || modalidad === '' || (tieneVenta && (cliente === '' || destino === ''))}
             className="w-full mt-2 flex items-center justify-center gap-2 py-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg transition-all transform active:scale-95 border"
             style={{
@@ -855,8 +910,48 @@ function App() {
             {guardando ? 'Guardando...' : '💾 Guardar Trato'}
           </button>
 
+          {confirmarPerdida && (
+            <div className="absolute inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+              <div className="w-full bg-gray-800 border-2 border-red-600 rounded-2xl p-5 shadow-2xl text-center">
+                <div className="text-3xl mb-2">⚠️</div>
+                <h2 className="text-red-400 font-black text-sm uppercase tracking-widest mb-2">
+                  Estás cerrando con pérdida
+                </h2>
+                <p className="text-gray-300 text-xs font-bold mb-3">
+                  Ofreciste <span className="text-white font-mono">${Number(ppProv || 0).toFixed(2)}</span> por kg
+                  y el límite para no perder es <span className="text-white font-mono">${Number(precioTopeCompra || 0).toFixed(2)}</span>.
+                </p>
+                <div className="bg-red-900 border border-red-700 text-red-300 rounded-lg py-2 px-3 text-xs font-black mb-4">
+                  Pérdida estimada: {fMxn(Math.abs(utilidadNeta))}<br />
+                  <span className="text-[9px] font-bold">({fMxn(Math.abs(utilidadPorKg))} por kg)</span>
+                </div>
+                <p className="text-gray-400 text-[11px] font-bold mb-4">
+                  ¿De verdad quieres guardar el trato a ese precio?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmarPerdida(false)}
+                    className="flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest bg-gray-700 text-gray-200 border border-gray-600 active:scale-95 transition-transform"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => handleGuardarCotizacion({ confirmadoPerdida: true })}
+                    className="flex-1 py-3 rounded-xl font-black text-xs uppercase tracking-widest bg-red-600 text-white border border-red-500 active:scale-95 transition-transform"
+                  >
+                    Sí, cerrar así
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {mensajeExito && (
-            <div className="absolute inset-x-0 bottom-4 mx-4 bg-green-600 text-white text-center text-xs font-black py-3 rounded-xl shadow-xl animate-bounce border border-green-400 z-50">
+            <div className={`absolute inset-x-0 bottom-4 mx-4 text-white text-center text-xs font-black py-3 rounded-xl shadow-xl animate-bounce border z-50 ${
+              mensajeExito.startsWith('❌')
+                ? 'bg-red-700 border-red-400'
+                : 'bg-green-600 border-green-400'
+            }`}>
               {mensajeExito}
             </div>
           )}

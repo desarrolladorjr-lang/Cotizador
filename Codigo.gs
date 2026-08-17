@@ -1,6 +1,23 @@
 var CLIENT_ID = '65144242856-79jgp1htcetc9g9ht1b3vkl5q3j2uh2b.apps.googleusercontent.com';
 var DOMINIO_PERMITIDO = 'sidellscrap.com';
 
+// Destino de la captura del cotizador: EXPORTACIONES 2026, hoja LOGÍSTICA.
+// Antes eran 5 hojas (Terrestre/Marítimo/Nacional/Compras/Inventarios) en el
+// spreadsheet 12-gjHHdqqAVsLsEE3I94MxpE9POpRVTBfMorLByrn-A; ahora todas las
+// modalidades escriben la misma fila y se distinguen por la columna SEGMENTO.
+var CAPTURA_SPREADSHEET_ID = '14ep3kX8urvZlwHwcdMJZEf6V6aIJWs1ZWxCyNVb-uxc';
+var CAPTURA_SHEET_NAME = 'LOGÍSTICA';
+
+// Orden exacto de las columnas de LOGÍSTICA. Contrato con doPost: si cambia
+// aquí, cambia el arreglo `row`.
+var CAPTURA_TITULOS = [
+  'FECHA ', 'USUARIO', 'SEGMENTO', 'PROVEEDOR', 'CLIENTE', 'DESTINO',
+  'CARGAS', 'KG OC', 'MATERIAL', 'EMBALAJE', 'NEGOCIACION',
+  'TC. BANCO', 'TC. SEGURO', 'DÍAS CREDITO', '% FIJ', 'FIX P',
+  'PC VENTA', 'PC COMPRA', 'PPAC PROV', 'FLETE NAC.', 'FLETE INT.',
+  'OCEANS', 'MERMA %', 'ESTATUS', 'UT NETA', 'OBSERVACIONES'
+];
+
 // Verifica el id_token de Google Sign-In contra el endpoint de Google.
 //
 // El cliente ya filtra por dominio en handleCredentialResponse, pero esa comprobacion
@@ -26,6 +43,20 @@ function validarCredencial(credential) {
   return info.email;
 }
 
+// Ejecutar a mano desde el editor para forzar el consentimiento de
+// script.external_request. validarCredencial vive dentro de doPost, que nunca
+// corre en el editor, asi que Apps Script no pedia ese permiso por si solo.
+function probarPermisos() {
+  var codigo = UrlFetchApp.fetch(
+    'https://oauth2.googleapis.com/tokeninfo?id_token=xxx',
+    { muteHttpExceptions: true }
+  ).getResponseCode();
+  // 400 es la respuesta correcta: el token es basura a proposito. Lo que importa
+  // es que la llamada haya salido sin excepcion de permisos.
+  Logger.log('UrlFetchApp OK — Google respondio ' + codigo);
+  Logger.log('Hoja destino: ' + (verificarTitulosGoogleSheets() ? 'OK' : 'REVISAR'));
+}
+
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
@@ -39,98 +70,47 @@ function doPost(e) {
     // El autor lo dicta el token, no el cuerpo del POST: data.usuario es suplantable.
     data.usuario = correoVerificado;
 
-    var spreadsheet = SpreadsheetApp.openById('12-gjHHdqqAVsLsEE3I94MxpE9POpRVTBfMorLByrn-A');
+    var spreadsheet = SpreadsheetApp.openById(CAPTURA_SPREADSHEET_ID);
 
-    // 1. Determinar la hoja de destino basada en la modalidad
-    var sheet;
-    if (data.modalidad === 'Marítimo') {
-      sheet = spreadsheet.getSheetByName('Marítimo');
-    } else if (data.modalidad === 'Nacional') {
-      sheet = spreadsheet.getSheetByName('Nacional');
-    } else if (data.modalidad === 'inventarios') {
-      sheet = spreadsheet.getSheetByName('Inventarios');
-    } else if (data.modalidad === 'Compras') {
-      sheet = spreadsheet.getSheetByName('Compras');
-    } else {
-      sheet = spreadsheet.getSheetByName('Terrestre');
-    }
-
+    // 1. Una sola hoja para todas las modalidades: la modalidad va en SEGMENTO.
+    var sheet = spreadsheet.getSheetByName(CAPTURA_SHEET_NAME);
     if (!sheet) {
-      sheet = spreadsheet.getActiveSheet();
+      throw new Error('No existe la hoja ' + CAPTURA_SHEET_NAME + ' en el spreadsheet de captura.');
     }
 
-    // 2. Preparar los datos según modalidad
-    var row;
-    if (data.modalidad === 'inventarios') {
-      row = [
-        data.fecha,
-        data.usuario,
-        data.proveedor,
-        data.cargas,
-        data.material,
-        data.fleteNac,
-        data.precioCompraMxn,
-        data.notas,
-        data.embalaje || '',
-        data.negociacion || '',
-        data.modalidad
-      ];
-    } else if (data.modalidad === 'Compras') {
-      row = [
-        data.fecha,
-        data.usuario,
-        data.proveedor,
-        data.cargas,
-        data.material,
-        data.origenFlete,
-        data.destinoFlete,
-        data.origenEmbarque || '',
-        data.fleteNac,
-        '', // fixPrice
-        '', // porcentajeFijacion
-        '', // precioVenta
-        '', // precioTopeCompra
-        data.paraInventarios ? 'Sí' : 'No',
-        data.intencionVenta ? 'Sí' : 'No',
-        data.intencionCompra ? 'Sí' : 'No',
-        data.precioCompraMxn || '',
-        data.notas,
-        data.embalaje || '',
-        data.negociacion || '',
-        data.modalidad,
-        data.tipoCompra
-      ];
-    } else {
-      row = [
-        data.fecha,
-        data.usuario,
-        data.cliente,
-        data.proveedor,
-        data.cargas,
-        data.material,
-        data.destino,
-        data.porcentajeFijacion,
-        data.fixPrice,
-        data.precioVenta,
-        data.tcHoy,
-        data.tcSeguro,
-        data.fleteNac,
-        data.cruceInt,
-        data.precioTopeCompra,
-        data.ppProv,
-        data.status,
-        data.utilidadNeta,
-        data.tipoCompra,
-        data.notas,
-        data.embalaje || '',
-        data.negociacion || '',
-        data.contrato || '',
-        data.paraInventarios ? 'Sí' : 'No',
-        data.intencionVenta ? 'Sí' : 'No',
-        data.intencionCompra ? 'Sí' : 'No',
-        data.modalidad
-      ];
-    }
+    // 2. La fila sigue el orden exacto de CAPTURA_TITULOS. La captura sin venta
+    //    (Inventarios) deja vacío lo que solo existe cuando hay venta. Se acepta
+    //    'Compras' porque asi se etiquetaba antes y hay filas viejas con ese valor.
+    var conVenta = data.modalidad !== 'Inventarios' && data.modalidad !== 'Compras';
+    var row = [
+      data.fecha,
+      data.usuario,
+      data.modalidad,
+      data.proveedor,
+      // En Inventarios el cliente viene con el proveedor repetido, no vacío.
+      data.cliente,
+      data.destino,
+      data.cargas,
+      data.kgOc,
+      data.material,
+      data.embalaje || '',
+      data.negociacion || '',
+      data.tcHoy,
+      conVenta ? data.tcSeguro : '',
+      data.diasCredito,
+      conVenta ? data.porcentajeFijacion : '',
+      conVenta ? data.fixPrice : '',
+      conVenta ? data.precioVenta : '',
+      conVenta ? data.precioTopeCompra : '',
+      data.ppProv,
+      data.fleteNac,
+      data.fleteInt,
+      data.oceans,
+      data.merma,
+      data.status,
+      conVenta ? data.utilidadNeta : '',
+      data.notas
+    ];
 
     // 3. Escribir en la hoja correcta
     sheet.appendRow(row);
@@ -281,46 +261,28 @@ function doGet(e) {
   }
 }
 
-function sincronizarTitulosGoogleSheets() {
-  var spreadsheet = SpreadsheetApp.openById('12-gjHHdqqAVsLsEE3I94MxpE9POpRVTBfMorLByrn-A');
-  
-  var titulosInventarios = [
-    "Fecha", "Usuario", "Proveedor", "Cargas", "Material", "Flete Nacional",
-    "Precio Compra MXN", "Notas", "Embalaje", "Negociación", "Segmento"
-  ];
-
-  var titulosCompras = [
-    "Fecha", "Usuario", "Proveedor", "Cargas", "Material", "Origen Flete",
-    "Destino Flete", "Origen Embarque", "Flete Nacional", "Fix Price",
-    "Porcentaje Fijación", "Precio Venta", "Precio Tope Compra",
-    "Para Inventarios", "Intención Venta", "Intención Compra",
-    "Precio Compra MXN", "Notas", "Embalaje", "Negociación", "Segmento", "Tipo Compra"
-  ];
-
-  var titulosGenerales = [
-    "Fecha", "Usuario", "Cliente", "Proveedor", "Cargas", "Material",
-    "Destino", "Porcentaje Fijación", "Fix Price", "Precio Venta", "TC Hoy",
-    "TC Seguro", "Flete Nacional", "Cruce Int", "Precio Tope Compra",
-    "PP Prov", "Status", "Utilidad Neta", "Tipo Compra", "Notas",
-    "Embalaje", "Negociación",
-    "Contrato", "Para Inventarios", "Intención Venta", "Intención Compra", "Segmento"
-  ];
-  
-  function setHeaders(sheetName, headers) {
-    var sheet = spreadsheet.getSheetByName(sheetName);
-    if (!sheet) {
-      sheet = spreadsheet.insertSheet(sheetName);
-    }
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
-    sheet.setFrozenRows(1); // Fija la primera fila para que los encabezados no se muevan
+// Verifica que la fila 1 de LOGÍSTICA siga siendo la que doPost espera.
+// No reescribe la hoja: la hoja es la fuente de verdad y la lleva logística;
+// si alguien mueve una columna, esto lo grita en el log en vez de pisarla.
+function verificarTitulosGoogleSheets() {
+  var sheet = SpreadsheetApp.openById(CAPTURA_SPREADSHEET_ID).getSheetByName(CAPTURA_SHEET_NAME);
+  if (!sheet) {
+    Logger.log('FALTA la hoja ' + CAPTURA_SHEET_NAME);
+    return false;
   }
-  
-  setHeaders('Inventarios', titulosInventarios);
-  setHeaders('Compras', titulosCompras);
-  setHeaders('Marítimo', titulosGenerales);
-  setHeaders('Nacional', titulosGenerales);
-  setHeaders('Terrestre', titulosGenerales);
-  
-  Logger.log("Títulos sincronizados correctamente en todas las hojas.");
+
+  var actuales = sheet.getRange(1, 1, 1, CAPTURA_TITULOS.length).getValues()[0];
+  var diferencias = [];
+  for (var i = 0; i < CAPTURA_TITULOS.length; i++) {
+    if (String(actuales[i]).trim() !== String(CAPTURA_TITULOS[i]).trim()) {
+      diferencias.push('col ' + (i + 1) + ': hoja="' + actuales[i] + '" esperado="' + CAPTURA_TITULOS[i] + '"');
+    }
+  }
+
+  if (diferencias.length) {
+    Logger.log('Encabezados fuera de sincronía:\n' + diferencias.join('\n'));
+    return false;
+  }
+  Logger.log('Encabezados de ' + CAPTURA_SHEET_NAME + ' OK.');
+  return true;
 }

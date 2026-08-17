@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { calcularCotizacion, KG_POR_CARGA, precioTotalNacionalDesdeTon } = require('./calc.js');
+const { calcularCotizacion, KG_POR_CARGA, precioTotalNacionalDesdeTon, maniobrasPorNegociacion, MANIOBRAS_BODEGA_MTY } = require('./calc.js');
 
 const base = {
   porcentajeFijacion: '100',
@@ -26,6 +26,49 @@ describe('KG_POR_CARGA', () => {
     expect(KG_POR_CARGA.terrestre).toBe(19500);
     expect(KG_POR_CARGA.nacional).toBe(24500);
     expect(KG_POR_CARGA.inventario).toBe(24500);
+  });
+});
+
+describe('maniobrasPorNegociacion', () => {
+  it('cobra maniobras cuando la carga pasa por la bodega de MTY', () => {
+    expect(maniobrasPorNegociacion('RECOLECCION MTY')).toBe(MANIOBRAS_BODEGA_MTY);
+    expect(maniobrasPorNegociacion('RECOLECCION BMTY')).toBe(MANIOBRAS_BODEGA_MTY);
+    expect(maniobrasPorNegociacion('BMTY ENTREGA')).toBe(MANIOBRAS_BODEGA_MTY);
+    expect(maniobrasPorNegociacion('BMTY DESTINO')).toBe(MANIOBRAS_BODEGA_MTY);
+  });
+
+  it('no cobra maniobras cuando la carga no toca la bodega', () => {
+    expect(maniobrasPorNegociacion('RECOLECCION DIRECTA')).toBe(0);
+    expect(maniobrasPorNegociacion('DIRECTO ENTREGA')).toBe(0);
+  });
+
+  it('no cobra si la negociación aún no se elige', () => {
+    expect(maniobrasPorNegociacion('')).toBe(0);
+    expect(maniobrasPorNegociacion(null)).toBe(0);
+    expect(maniobrasPorNegociacion(undefined)).toBe(0);
+  });
+
+  it('tolera espacios y minúsculas del catálogo', () => {
+    expect(maniobrasPorNegociacion('  bmty entrega ')).toBe(MANIOBRAS_BODEGA_MTY);
+  });
+
+  it('el monto de bodega es 0.60 por kg', () => {
+    expect(MANIOBRAS_BODEGA_MTY).toBe(0.60);
+  });
+});
+
+describe('calcularCotizacion — maniobras según negociación', () => {
+  const conNeg = neg => calcularCotizacion({
+    ...base, modalidad: 'nacional', precioKgMxn: '30', fleteNac: '0',
+    merma: '0', ppProv: '0', maniobras: maniobrasPorNegociacion(neg),
+  });
+
+  it('descuenta 0.60 del tope si pasa por bodega MTY', () => {
+    expect(conNeg('RECOLECCION BMTY').precioTopeCompra).toBeCloseTo(30 - 0.60, 4);
+  });
+
+  it('no descuenta nada si es entrega directa', () => {
+    expect(conNeg('DIRECTO ENTREGA').precioTopeCompra).toBeCloseTo(30, 4);
   });
 });
 

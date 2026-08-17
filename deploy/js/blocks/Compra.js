@@ -220,7 +220,7 @@ function BloqueCompra({
           <label className="block text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-1">Negociación</label>
           <select value={negociacion} onChange={e => setNegociacion(e.target.value)} className={selCls}>
             <option value="">— Negociación —</option>
-            {["RECOLECCION DIRECTA", "RECOLECCION BMTY", "DIRECTO ENTREGA", "BMTY ENTREGA", "LAREDO ENTREGA"].map(o => <option key={o} value={o}>{o}</option>)}
+            {["RECOLECCION DIRECTA", "RECOLECCION BMTY", "DIRECTO ENTREGA", "BMTY ENTREGA"].map(o => <option key={o} value={o}>{o}</option>)}
           </select>
         </div>
       </div>

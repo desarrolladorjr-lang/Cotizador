@@ -7,6 +7,16 @@ const Celda = ({ label, valor, accent, destacado }) => (
   </div>
 );
 
+// La fecha viene en ISO ('YYYY-MM-DD'); se parte a mano porque new Date('YYYY-MM-DD')
+// la interpreta en UTC y en México se veria un dia antes.
+const fechaTarifario = () => {
+  const iso = typeof TARIFARIO_ACTUALIZADO === 'string' ? TARIFARIO_ACTUALIZADO : '';
+  const [a, m, d] = iso.split('-');
+  if (!a || !m || !d) return '—';
+  const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  return `${Number(d)}/${MESES[Number(m) - 1]}/${a}`;
+};
+
 // Desglose de solo lectura del tarifario marítimo. Replica las columnas del xlsx.
 function DesgloseMaritimo({ row, tc, accent }) {
   if (!row) return null;
@@ -43,6 +53,7 @@ function DesgloseMaritimo({ row, tc, accent }) {
       </div>
 
       <div className="text-[8px] text-gray-600 font-bold leading-tight pt-1.5">Despacho convertido de MXN a T.C. banco</div>
+      <div className="text-[8px] text-gray-600 font-bold leading-tight pt-0.5">Tarifario actualizado: {fechaTarifario()}</div>
     </div>
   );
 }
@@ -70,6 +81,9 @@ function VentaMaritimo({
 
   const t = tarifario;
   const destinos = [...new Set(TARIFARIO_DATA.map(r => r.pod))].sort();
+  // POD -> país, para mostrar el país junto al destino en el selector
+  const paisPorDestino = {};
+  TARIFARIO_DATA.forEach(r => { if (r.pod && r.pais && !paisPorDestino[r.pod]) paisPorDestino[r.pod] = r.pais; });
   const origenes = t.destino
     ? [...new Set(TARIFARIO_DATA.filter(r => r.pod === t.destino).map(r => r.o))].sort()
     : [];
@@ -109,7 +123,11 @@ function VentaMaritimo({
                 onChange={e => setTarifario({ destino: e.target.value, origen: '', pol: '', proveedor: '', equipo: '', tipo: '' })}
                 className={selMini}>
           <option value="">— Destino (POD) —</option>
-          {destinos.map(d => <option key={d} value={d}>{d}</option>)}
+          {destinos.map(d => (
+            <option key={d} value={d}>
+              {paisPorDestino[d] ? `${d} — ${paisPorDestino[d]}` : d}
+            </option>
+          ))}
         </select>
 
         {/* 2. Origen */}

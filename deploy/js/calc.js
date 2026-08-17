@@ -7,6 +7,24 @@
   const MARGEN_EXTRA = 0.10;
   const KG_CARGA_FLETE_NAC = 24500;
 
+  // Maniobras de bodega (MXN x KG). Solo se cobran si la carga entra y sale de la
+  // bodega de MTY (Gral. Escobedo): es el costo de bajarla, estibarla y volverla a
+  // cargar. En entrega directa o recoleccion directa el material nunca la toca.
+  const MANIOBRAS_BODEGA_MTY = 0.60;
+
+  const NEGOCIACIONES_CON_BODEGA_MTY = [
+    'RECOLECCION MTY',
+    'RECOLECCION BMTY',
+    'BMTY ENTREGA',
+    'BMTY DESTINO',
+  ];
+
+  function maniobrasPorNegociacion(negociacion) {
+    if (!negociacion) return 0;
+    const negNorm = String(negociacion).trim().toUpperCase();
+    return NEGOCIACIONES_CON_BODEGA_MTY.includes(negNorm) ? MANIOBRAS_BODEGA_MTY : 0;
+  }
+
   const truncar = n => Math.trunc(n * 100) / 100;
 
   // Ayuda de captura de Nacional: el operador piensa en precio por tonelada,
@@ -94,7 +112,10 @@
     };
   }
 
-  const api = { KG_POR_CARGA, calcularCotizacion, precioTotalNacionalDesdeTon };
+  const api = {
+    KG_POR_CARGA, calcularCotizacion, precioTotalNacionalDesdeTon,
+    MANIOBRAS_BODEGA_MTY, NEGOCIACIONES_CON_BODEGA_MTY, maniobrasPorNegociacion,
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else Object.assign(root, api);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

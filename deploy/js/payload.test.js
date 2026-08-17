@@ -17,6 +17,7 @@ const base = {
   material: 'PET', destino: 'LAREDO', origenEmbarque: 'Mérida',
   porcentajeFijacion: '100', fixPrice: '1000', tcHoy: '17',
   fleteNac: '39000', cruceInt: '1000', ppProv: '10', notas: 'x',
+  diasCobro: '15', merma: '1',
   embalaje: 'PACAS', negociacion: 'DIRECTO ENTREGA',
   origenFlete: 'GDL', destinoFlete: 'MTY',
   calculo,
@@ -29,7 +30,7 @@ describe('construirPayload — modalidad', () => {
     expect(m('terrestre')).toBe('Terrestre');
     expect(m('maritimo')).toBe('Marítimo');
     expect(m('nacional')).toBe('Nacional');
-    expect(m('inventario')).toBe('Compras');
+    expect(m('inventario')).toBe('Inventarios');
   });
 });
 
@@ -79,8 +80,8 @@ describe('construirPayload — inventario', () => {
     calculo: { tcSeguro: 0, capKg: 24500, precioVenta: 0, precioTopeCompra: 0, utilidadNeta: 0, utilidadPorKg: 0, status: '' },
   });
 
-  it('no manda cliente', () => {
-    expect(p.cliente).toBe('');
+  it('manda BMTY como cliente: el material entra a bodega propia, no a un comprador', () => {
+    expect(p.cliente).toBe('BMTY');
   });
 
   it('marca para inventarios', () => {
@@ -120,18 +121,62 @@ describe('construirPayload — modalidad vacía', () => {
   });
 });
 
-describe('construirPayload — cruceInt por modalidad', () => {
-  it('manda el cruce internacional en terrestre y maritimo', () => {
-    expect(construirPayload({ ...base, modalidad: 'terrestre' }).cruceInt).toBe(1000);
-    expect(construirPayload({ ...base, modalidad: 'maritimo' }).cruceInt).toBe(1000);
+describe('construirPayload — flete internacional por modalidad', () => {
+  const inventario = extra => construirPayload({
+    ...base, modalidad: 'inventario',
+    calculo: { tcSeguro: 0, capKg: 24500, precioVenta: 0, precioTopeCompra: 0, utilidadNeta: 0, utilidadPorKg: 0, status: '' },
+    ...extra,
   });
 
-  it('fuerza cruceInt a 0 en nacional e inventario aunque el estado traiga un valor viejo de maritimo', () => {
-    expect(construirPayload({ ...base, modalidad: 'nacional', cruceInt: '1441.53' }).cruceInt).toBe(0);
+  it('en terrestre el cruce cae en FLETE INT. y OCEANS queda en 0', () => {
+    const p = construirPayload({ ...base, modalidad: 'terrestre' });
+    expect(p.fleteInt).toBe(1000);
+    expect(p.oceans).toBe(0);
+  });
+
+  it('en maritimo el cruce cae en OCEANS y FLETE INT. queda en 0', () => {
+    const p = construirPayload({ ...base, modalidad: 'maritimo' });
+    expect(p.oceans).toBe(1000);
+    expect(p.fleteInt).toBe(0);
+  });
+
+  it('fuerza ambos a 0 en nacional e inventario aunque el estado traiga un valor viejo de maritimo', () => {
+    const n = construirPayload({ ...base, modalidad: 'nacional', cruceInt: '1441.53' });
+    expect(n.fleteInt).toBe(0);
+    expect(n.oceans).toBe(0);
+    const i = inventario({ cruceInt: '1441.53' });
+    expect(i.fleteInt).toBe(0);
+    expect(i.oceans).toBe(0);
+  });
+});
+
+describe('construirPayload — columnas nuevas de LOGÍSTICA', () => {
+  it('manda los kg de la OC: cargas por la capacidad de la modalidad', () => {
+    // 3.5 cargas x 19500 kg
+    expect(construirPayload(base).kgOc).toBe(68250);
+  });
+
+  it('manda dias de credito y merma', () => {
+    const p = construirPayload({ ...base, diasCobro: '30', merma: '2.5' });
+    expect(p.diasCredito).toBe(30);
+    expect(p.merma).toBe(2.5);
+  });
+
+  it('no manda dias de credito donde no hay T.C. seguro (nacional e inventario)', () => {
+    expect(construirPayload({ ...base, modalidad: 'nacional' }).diasCredito).toBe(0);
     expect(construirPayload({
-      ...base, modalidad: 'inventario', cruceInt: '1441.53',
+      ...base, modalidad: 'inventario',
       calculo: { tcSeguro: 0, capKg: 24500, precioVenta: 0, precioTopeCompra: 0, utilidadNeta: 0, utilidadPorKg: 0, status: '' },
-    }).cruceInt).toBe(0);
+    }).diasCredito).toBe(0);
+  });
+
+  it('en Compras el destino sale del flete, no de la venta', () => {
+    const p = construirPayload({
+      ...base, modalidad: 'inventario',
+      calculo: { tcSeguro: 0, capKg: 24500, precioVenta: 0, precioTopeCompra: 0, utilidadNeta: 0, utilidadPorKg: 0, status: '' },
+    });
+    expect(p.destino).toBe('MTY');
+    expect(construirPayload(base).destino).toBe('LAREDO');
   });
 });
 
