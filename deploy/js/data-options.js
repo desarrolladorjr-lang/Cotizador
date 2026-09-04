@@ -93,6 +93,7 @@ const listaProveedoresColumnaA = [
   "JOSE LUIS MARTINEZ",
   "JRG",
   "LUIS TORRES",
+  "MARIO PADILLA",
   "MEINSUR",
   "METAL EUTECTIC",
   "NOEMI",

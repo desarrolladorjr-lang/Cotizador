@@ -72,9 +72,9 @@ const TARIFARIO_FLETES = [
   { co: "JERONIMO GENERAL METALES", o: "SAN LUIS POTOSÍ, SLP", cd: "EL TEJON SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 16750, moneda: "MXP" },
   { co: "JERONIMO GENERAL METALES", o: "SAN LUIS POTOSÍ, SLP", cd: "EL TEJON JAL", d: "TLAQUEPAQUE, JAL", costo: 16000, moneda: "MXP" },
   { co: "JERONIMO GENERAL METALES", o: "SAN LUIS POTOSÍ, SLP", cd: "RECICLE", d: "AGUASCALIENTES, AGS", costo: 15500, moneda: "MXP" },
-  { co: "BMTY", o: "GRAL. ESCOBÉDO, NL", cd: "TOBI", d: "GRAL. ESCOBÉDO, NL", costo: 30740, moneda: "MXP" },
   { co: "TORIBIO", o: "IXTAPALUCA, EDO. MEX.", cd: "EL TEJON", d: "TLAJOMULCO DE ZUÑIGA, JAL", costo: 30740, moneda: "MXP" },
-  { co: "NOEMI", o: "TLAHUAC, EDO. MEX", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 30740, moneda: "MXP" }
+  { co: "NOEMI", o: "TLAHUAC, EDO. MEX", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 30740, moneda: "MXP" },
+  { co: "MARIO PADILLA", o: "JARDINES DE LA CALERA, JAL.", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 24940, moneda: "MXP" }
 ];
 
 // Mapa de Cliente Destino -> Ciudad Destino Predeterminada
