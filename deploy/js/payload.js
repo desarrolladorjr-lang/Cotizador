@@ -36,6 +36,8 @@
 
     return {
       credential: e.credential,
+      // Token de sesion propio (30 dias). El backend lo prefiere sobre credential.
+      sesion: e.sesion,
       fecha: e.fecha,
       usuario: e.usuario,
       modalidad: ETIQUETA_MODALIDAD[e.modalidad],

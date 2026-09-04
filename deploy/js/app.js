@@ -1,9 +1,37 @@
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useRef } = React;
 
-// La sesion es el id_token de Google, no el perfil: el backend valida el token y de ahi
-// saca el correo. Guardar solo el perfil dejaba la app "con sesion" tras recargar pero
-// sin credencial que mandar, y el guardado fallaba en silencio.
+// Google Sign-In solo sirve para el primer acceso: su id_token dura ~1 hora y
+// renovarlo obliga a enseñar la tarjeta de One Tap a media captura. Al entrar, ese
+// id_token se canjea en Apps Script por un token de sesion propio (firmado alla,
+// 30 dias), y es ese el que viaja en cada guardado.
 const SESION_KEY = 'sesionCotizador';
+
+const CLIENT_ID = "65144242856-79jgp1htcetc9g9ht1b3vkl5q3j2uh2b.apps.googleusercontent.com";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6FL__1-H4xOrjfu1x4kXwcBRUlAGy-YynrNrcxHk9qmzB4es3Op0Ci8_y6vM4zIBm/exec";
+
+// POST a Apps Script. text/plain, no application/json: asi es "simple request" y el
+// navegador no manda preflight (Apps Script no responde OPTIONS). El cuerpo sigue
+// llegando como JSON a e.postData.contents.
+async function postScript(cuerpo) {
+  const respuesta = await fetch(GOOGLE_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(cuerpo)
+  });
+  // Apps Script responde JSON, pero cuando Google se cae a medias (o la red corta
+  // el redirect a googleusercontent) llega una pagina HTML de error que el script
+  // nunca vio. Eso reventaba en .json() con "Unexpected token '<'".
+  const texto = await respuesta.text();
+  try {
+    return JSON.parse(texto);
+  } catch (_) {
+    console.error('Respuesta no-JSON del script:', respuesta.status, texto.slice(0, 500));
+    throw new Error(
+      'Google respondio una pagina en vez de datos (HTTP ' + respuesta.status + '). ' +
+      'Revisa la hoja antes de reintentar: la captura pudo haberse guardado.'
+    );
+  }
+}
 
 // exp del JWT, en milisegundos. null si el token no es legible.
 function expiracionDeToken(credential) {
@@ -21,26 +49,52 @@ function expiracionDeToken(credential) {
 // Medio minuto de colchon para que un token no expire entre el chequeo y el POST.
 const MARGEN_EXPIRACION_MS = 30000;
 
+// Vale para guardar si trae token de sesion sin vencer (30 dias) o, recien entrado,
+// el id_token de Google todavia fresco: el backend acepta los dos.
 function sesionVigente(sesion) {
-  return !!sesion && !!sesion.credential && !!sesion.expiraEn
-    && sesion.expiraEn - MARGEN_EXPIRACION_MS > Date.now();
+  if (!sesion) return false;
+  const alDia = !!sesion.expiraEn && sesion.expiraEn - MARGEN_EXPIRACION_MS > Date.now();
+  return alDia && !!(sesion.token || sesion.credential);
 }
 
 function leerSesionGuardada() {
   try {
     const sesion = JSON.parse(localStorage.getItem(SESION_KEY));
-    // Un token expirado no sirve para guardar, asi que no cuenta como sesion.
-    return sesionVigente(sesion) ? sesion : null;
+    if (!sesion || !sesion.perfil) return null;
+    // Sesiones guardadas por la version vieja traen solo el id_token y su exp de 1
+    // hora. Se conservan: el primer guardado las canjea por token propio.
+    return sesion.token || sesion.credential ? sesion : null;
   } catch (e) {
     return null;
   }
 }
 
+function guardarSesion(sesion) {
+  try {
+    localStorage.setItem(SESION_KEY, JSON.stringify(sesion));
+  } catch (e) {
+    console.error('No se pudo guardar la sesion:', e);
+  }
+}
+
+function gsiListo() {
+  return !!(window.google && window.google.accounts && window.google.accounts.id);
+}
+
 function App() {
   const [sesion, setSesion] = useState(leerSesionGuardada);
   const usuario = sesion ? sesion.perfil : null;
-  const credToken = sesion ? sesion.credential : '';
+  const usuarioEmail = usuario ? usuario.email : '';
   const [errorLogin, setErrorLogin] = useState('');
+  // Solo cuando la renovacion silenciosa falla: se pide entrar de nuevo encima del
+  // formulario, sin borrar nada de lo capturado.
+  const [necesitaReloguear, setNecesitaReloguear] = useState(false);
+
+  const sesionRef = useRef(sesion);
+  sesionRef.current = sesion;
+  const gsiInicializadoRef = useRef(false);
+  const handleCredentialRef = useRef(null);
+  const canjeInicialRef = useRef(false);
 
   const [guardando, setGuardando] = useState(false);
   const [confirmarPerdida, setConfirmarPerdida] = useState(false);
@@ -408,13 +462,16 @@ function App() {
     }
   }, [cliente, destino, negociacion, proveedores, comprasOrigenFlete, comprasDestinoFlete, origenEmbarque, modalidad, tcHoy]);
 
-  // CONFIGURACIÓN GOOGLE SIGN-IN — load script only when no session
+  // CONFIGURACIÓN GOOGLE SIGN-IN — solo cuando de verdad hay que pedir acceso: al
+  // entrar la primera vez, o si la sesion de 30 dias murio. Con sesion abierta el
+  // SDK se apaga, que es lo que evita que One Tap salte encima de la captura.
+  const pideBoton = !usuario || necesitaReloguear;
+
   useEffect(() => {
-    if (usuario) {
-      if (window.google && window.google.accounts) {
+    if (!pideBoton) {
+      if (gsiListo()) {
         try {
           window.google.accounts.id.cancel();
-          window.google.accounts.id.disableAutoSelect();
         } catch (e) {}
       }
       document.querySelectorAll(
@@ -427,20 +484,25 @@ function App() {
     const GSI_SRC = "https://accounts.google.com/gsi/client";
 
     const initGoogle = () => {
-      if (cancelled || !window.google) return;
-      window.google.accounts.id.initialize({
-        client_id: "65144242856-79jgp1htcetc9g9ht1b3vkl5q3j2uh2b.apps.googleusercontent.com",
-        callback: handleCredentialResponse,
-        auto_select: false,
-        cancel_on_tap_outside: true
-      });
+      if (cancelled || !gsiListo()) return;
+      if (!gsiInicializadoRef.current) {
+        window.google.accounts.id.initialize({
+          client_id: CLIENT_ID,
+          // Indirecto a proposito: initialize corre una sola vez y el callback debe
+          // ver siempre la version actual del handler.
+          callback: (resp) => handleCredentialRef.current(resp),
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+        gsiInicializadoRef.current = true;
+      }
       const btn = document.getElementById("buttonDiv");
       if (btn) {
         window.google.accounts.id.renderButton(btn, { theme: "outline", size: "large", width: 320 });
       }
     };
 
-    if (window.google && window.google.accounts) {
+    if (gsiListo()) {
       initGoogle();
     } else {
       let script = document.querySelector(`script[src="${GSI_SRC}"]`);
@@ -455,7 +517,53 @@ function App() {
     }
 
     return () => { cancelled = true; };
-  }, [usuario]);
+  }, [pideBoton]);
+
+  // Canjea lo que haya (id_token recien firmado, o token propio por vencer) por un
+  // token de sesion nuevo de 30 dias. Todo por POST: no interviene Google, asi que
+  // no aparece ninguna tarjeta encima del formulario.
+  const canjearSesion = async (base) => {
+    if (!base) return null;
+    try {
+      const res = await postScript({
+        accion: 'sesion',
+        sesion: base.token || '',
+        credential: base.credential || ''
+      });
+      if (!res || res.error || !res.sesion) return null;
+      const renovada = {
+        perfil: base.perfil,
+        token: res.sesion,
+        expiraEn: res.expiraEn,
+        // El id_token ya no hace falta una vez que hay token propio.
+        credential: ''
+      };
+      setSesion(renovada);
+      sesionRef.current = renovada;
+      guardarSesion(renovada);
+      return renovada;
+    } catch (e) {
+      console.error('No se pudo canjear la sesion:', e);
+      return null;
+    }
+  };
+
+  // Al abrir la app se corre la vigencia hacia adelante: quien entra a diario nunca
+  // llega a los 30 dias. Si el canje falla no se toca nada — la sesion guardada
+  // sigue sirviendo y el guardado lo reintenta.
+  useEffect(() => {
+    const actual = sesionRef.current;
+    if (!actual || canjeInicialRef.current) return;
+    canjeInicialRef.current = true;
+    if (!sesionVigente(actual)) {
+      // Se avisa al abrir, no despues de capturar todo: pasa una sola vez, al
+      // migrar desde la sesion vieja de 1 hora o tras 30 dias sin entrar.
+      setErrorLogin('Tu sesión caducó. Vuelve a entrar.');
+      setNecesitaReloguear(true);
+      return;
+    }
+    canjearSesion(actual);
+  }, [usuarioEmail]);
 
   const handleCredentialResponse = (response) => {
     const base64Url = response.credential.split('.')[1];
@@ -470,13 +578,20 @@ function App() {
       // Este filtro es de conveniencia: quien manda es validarCredencial en Codigo.gs.
       const nuevaSesion = {
         perfil: payload,
+        token: '',
         credential: response.credential,
         expiraEn: expiracionDeToken(response.credential),
       };
       setSesion(nuevaSesion);
-      localStorage.setItem(SESION_KEY, JSON.stringify(nuevaSesion));
+      sesionRef.current = nuevaSesion;
+      guardarSesion(nuevaSesion);
       setErrorLogin('');
-      if (window.google) window.google.accounts.id.cancel();
+      setNecesitaReloguear(false);
+      // El id_token dura una hora; se cambia enseguida por el token propio de 30
+      // dias. Si el canje falla, la sesion sigue valida esa hora y se reintenta al
+      // guardar.
+      canjearSesion(nuevaSesion);
+      if (gsiListo()) window.google.accounts.id.cancel();
 
       // Limpieza forzada de cualquier iframe residual de Google
       const googleIframe = document.querySelector('iframe[src*="smartlock"]');
@@ -487,6 +602,7 @@ function App() {
       setErrorLogin('Acceso denegado. Utiliza un correo de @sidellscrap.com');
     }
   };
+  handleCredentialRef.current = handleCredentialResponse;
 
   // La fila del tarifario define el ocean freight y si el despacho ya viene incluido.
   useEffect(() => {
@@ -535,15 +651,11 @@ function App() {
     }
   };
 
+  // Depende del correo, no del objeto sesion: cada renovacion crea un perfil nuevo y
+  // con [usuario] se volvia a pedir el TC, pisando el que el operador hubiera puesto.
   useEffect(() => {
-    if (usuario) {
-      obtenerTipoDeCambio();
-      // Cancelar el One Tap explícitamente si ya hay sesión
-      if (window.google) {
-        window.google.accounts.id.cancel();
-      }
-    }
-  }, [usuario]);
+    if (usuarioEmail) obtenerTipoDeCambio();
+  }, [usuarioEmail]);
 
   const cargasTotales = proveedores.reduce((s, r) => s + (Number(r.cargas) || 0), 0);
 
@@ -574,6 +686,41 @@ function App() {
   // Cerrar arriba del tope de compra es pérdida segura. El color rojo solo se ve si
   // el operador está mirando la tarjeta, así que el guardado pide confirmación
   // explícita antes de mandar el trato al Sheet.
+  // Trato guardado: limpia captura para el siguiente. tcHoy queda (es el TC del
+  // dia, no del trato) y la sesion tampoco se toca.
+  const limpiarFormulario = () => {
+    setCliente('');
+    setPorcentajeFijacion("100");
+    setFixPrice("2550.00");
+    setDiasCobro("15");
+    setFleteNac("0");
+    setAduanaMex("2308");
+    setCruceInt("0");
+    setAduanaUsa("65");
+    setMerma("1");
+    setPpProv("40.00");
+    setMaterial('UBC');
+    setDestino('');
+    setOrigenEmbarque('');
+    setRutaNacSelect('');
+    setRutaIntSelect('');
+    setNotas('');
+    setEmbalaje('');
+    setNegociacion('');
+    setComprasOrigenFlete('');
+    setComprasDestinoFlete('GRAL. ESCOBÉDO, NL');
+    setPrecioKgNacional("");
+    setPrecioTonNacional("");
+    setPrecioMxnNacional("");
+    setCapacidadCNT(20);
+    setMaritimoRow(null);
+    setDestinoVenta('');
+    setModoExport('');
+    setProveedores([{ proveedor: '', cargas: '1' }]);
+    setTarifario({ destino: '', origen: '', pol: '', proveedor: '', equipo: '', tipo: '' });
+    setInfoFleteResuelto(null);
+  };
+
   const handleGuardarCotizacion = async ({ confirmadoPerdida = false } = {}) => {
     if (status === 'bad' && !confirmadoPerdida) {
       setConfirmarPerdida(true);
@@ -581,24 +728,23 @@ function App() {
     }
     setConfirmarPerdida(false);
 
-    // El backend rechaza los tokens vencidos, y el POST va en no-cors: si dejaramos
-    // salir uno vencido, la respuesta seria opaca y el usuario veria el check verde
-    // sin que se guardara nada. Se corta aqui y se pide entrar de nuevo.
-    if (!sesionVigente(sesion)) {
-      setSesion(null);
-      localStorage.removeItem(SESION_KEY);
-      setErrorLogin('Tu sesión expiró. Vuelve a entrar y captura de nuevo.');
+    // Antes se cerraba la sesion aqui y se perdia la captura. Ahora solo se pide
+    // entrar de nuevo cuando el token propio de 30 dias ya murio, y con el
+    // formulario intacto detras del modal.
+    let sesionActiva = sesionRef.current;
+    if (!sesionVigente(sesionActiva)) {
+      setErrorLogin('Tu sesión caducó. Vuelve a entrar: tus datos siguen aquí.');
+      setNecesitaReloguear(true);
       return;
     }
 
     setGuardando(true);
     try {
-      const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx6FL__1-H4xOrjfu1x4kXwcBRUlAGy-YynrNrcxHk9qmzB4es3Op0Ci8_y6vM4zIBm/exec";
-
       const payload = construirPayload({
-        credential: credToken,
+        credential: sesionActiva.credential || '',
+        sesion: sesionActiva.token || '',
         fecha: new Date().toLocaleDateString('es-MX'),
-        usuario: usuario.email,
+        usuario: sesionActiva.perfil.email,
         modalidad, cliente, proveedores, opcionesProveedor: opcionesProveedorActual,
         material, destino, origenEmbarque,
         porcentajeFijacion, fixPrice, tcHoy,
@@ -609,38 +755,41 @@ function App() {
         calculo,
       });
 
-      // text/plain, no application/json: asi el POST es una "simple request" y el
-      // navegador no manda preflight (Apps Script no responde OPTIONS). El cuerpo
-      // sigue llegando como JSON a e.postData.contents.
-      //
       // Sin mode:'no-cors' a proposito: con respuesta opaca el catch nunca ve nada
       // y la app cantaba "guardado" aunque el script devolviera un error.
-      const respuesta = await fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
+      const resultado = await postScript(payload);
 
-      // Apps Script responde JSON, pero cuando Google se cae a medias (o la red
-      // corta el redirect a googleusercontent) llega una pagina HTML de error que
-      // el script nunca vio: en el registro de ejecuciones no aparece nada. Eso
-      // reventaba en `.json()` con "Unexpected token '<'", un mensaje que no dice
-      // nada y, peor, deja sin saber si la fila entro o no.
-      const textoRespuesta = await respuesta.text();
-      let resultado;
-      try {
-        resultado = JSON.parse(textoRespuesta);
-      } catch (_) {
-        console.error('Respuesta no-JSON del script:', respuesta.status, textoRespuesta.slice(0, 500));
-        throw new Error(
-          'Google respondio una pagina en vez de datos (HTTP ' + respuesta.status + '). ' +
-          'Revisa la hoja antes de reintentar: la captura pudo haberse guardado.'
-        );
+      // El backend rechazo el token: se pide entrar de nuevo sin borrar la captura.
+      if (resultado.sesionInvalida) {
+        setErrorLogin('Tu sesión caducó. Vuelve a entrar: tus datos siguen aquí.');
+        setNecesitaReloguear(true);
+        return;
       }
       if (resultado.error) throw new Error(resultado.error);
 
-      setMensajeExito('✅ ¡Trato guardado exitosamente!');
-      setTimeout(() => setMensajeExito(''), 3000);
+      // Si el POST entro con id_token, el script devuelve ya el token de sesion.
+      if (resultado.sesion) {
+        const renovada = {
+          perfil: sesionActiva.perfil,
+          token: resultado.sesion,
+          expiraEn: resultado.expiraEn,
+          credential: ''
+        };
+        setSesion(renovada);
+        sesionRef.current = renovada;
+        guardarSesion(renovada);
+      }
+
+      // El correo es aviso aparte: si falla, la fila ya quedó y hay que decirlo sin
+      // hacerlo pasar por un guardado fallido.
+      if (resultado.avisoCorreo) {
+        setMensajeExito('⚠️ Guardado, pero el correo no salió. Avisa a sistemas.');
+        setTimeout(() => setMensajeExito(''), 8000);
+      } else {
+        setMensajeExito('✅ ¡Trato guardado exitosamente!');
+        setTimeout(() => setMensajeExito(''), 3000);
+      }
+      limpiarFormulario();
     } catch (error) {
       console.error(error);
       setMensajeExito('❌ No se guardó: ' + (error.message || error));
@@ -696,10 +845,32 @@ function App() {
           </div>
           <button onClick={() => {
             setSesion(null);
+            sesionRef.current = null;
+            canjeInicialRef.current = false;
+            setNecesitaReloguear(false);
             localStorage.removeItem(SESION_KEY);
-            if (window.google) window.google.accounts.id.disableAutoSelect();
+            // Salir es intencional: sin esto, auto_select volveria a entrar solo.
+            if (gsiListo()) window.google.accounts.id.disableAutoSelect();
           }} className="text-red-400 font-bold hover:text-red-300 transition-colors">Salir</button>
         </div>
+
+        {/* Reingreso sin perder la captura: solo aparece si la renovacion silenciosa falla. */}
+        {necesitaReloguear && (
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-70 flex items-center justify-center p-4">
+            <div className="w-full max-w-xs bg-gray-800 border border-gray-700 rounded-2xl p-6 text-center">
+              <h2 className="text-sm font-black uppercase tracking-widest text-white mb-2">Sesión caducada</h2>
+              <p className="text-xs text-gray-400 mb-4 font-bold">
+                Vuelve a entrar con tu correo. Lo que capturaste sigue aquí.
+              </p>
+              <div id="buttonDiv" className="flex justify-center mb-3"></div>
+              {errorLogin && (
+                <div className="bg-red-900 text-red-400 border border-red-700 text-xs font-bold p-3 rounded-lg">
+                  {errorLogin}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="p-6 space-y-5 relative z-10">
 
