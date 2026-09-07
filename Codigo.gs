@@ -465,21 +465,22 @@ function doGet(e) {
         var data = sheetFletes.getDataRange().getValues();
         var tarifas = [];
         // La fila 0 contiene los encabezados.
-        // Col A (index 0): Proveedor / Cliente Origen (co)
-        // Col C (index 2): Origen (o)
-        // Col D (index 3): Cliente Destino (cd)
-        // Col F (index 5): Destino (d)
-        // Col G (index 6): Costo Ruta
-        // Col H (index 7): Moneda
+        // El Sheet ahora tiene una columna Fecha en A, recorriendo todo una posicion:
+        // Col B (index 1): Proveedor / Cliente Origen (co)
+        // Col D (index 3): Origen (o)
+        // Col E (index 4): Cliente Destino (cd)
+        // Col G (index 6): Destino (d)
+        // Col H (index 7): Costo Ruta
+        // Col I (index 8): Moneda
         for (var i = 1; i < data.length; i++) {
           var row = data[i];
-          var co = String(row[0] || '').trim();
-          var o = String(row[2] || row[1] || '').trim();
-          var cd = String(row[3] || '').trim();
-          var d = String(row[5] || row[4] || '').trim();
-          var costoStr = String(row[6] || '').replace(/[\$,]/g, '').trim();
+          var co = String(row[1] || '').trim();
+          var o = String(row[3] || row[2] || '').trim();
+          var cd = String(row[4] || '').trim();
+          var d = String(row[6] || row[5] || '').trim();
+          var costoStr = String(row[7] || '').replace(/[\$,]/g, '').trim();
           var costo = parseFloat(costoStr) || 0;
-          var moneda = String(row[7] || 'MXP').trim().toUpperCase();
+          var moneda = String(row[8] || 'MXP').trim().toUpperCase();
           if (co || cd || o || d) {
             tarifas.push({ co: co, o: o, cd: cd, d: d, costo: costo, moneda: moneda });
           }

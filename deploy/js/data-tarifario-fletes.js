@@ -29,7 +29,7 @@ const TARIFARIO_FLETES = [
   { co: "HORACIO SERVIN", o: "ZAPOTE DEL VALLE, JAL.", cd: "BMTY", d: "GRAL. ESCOBÉDO, NL", costo: 35960, moneda: "MXP" },
   { co: "JAVIER VILLARREAL", o: "PESQUERÍA, NL.", cd: "JRG MTY", d: "APODACA, NL", costo: 9280, moneda: "MXP" },
   { co: "CESAR DELGADO", o: "TLAQUEPAQUE, JAL", cd: "JRG MTY", d: "APODACA, NL", costo: 35960, moneda: "MXP" },
-  { co: "HUMBERTO SERVIN", o: "TLAJOMULCO DE ZUÑIGA, JAL.", cd: "JRG MTY", d: "APODACA, NL", costo: 35960, moneda: "MXP" },
+  { co: "HUMBERTO SERVIN", o: "TLAQUEPAQUE, JAL", cd: "JRG MTY", d: "APODACA, NL", costo: 35960, moneda: "MXP" },
   { co: "BMTY", o: "GRAL. ESCOBÉDO, NL", cd: "JRG MTY", d: "APODACA, NL", costo: 11020, moneda: "MXP" },
   { co: "BMTY", o: "GRAL. ESCOBÉDO, NL", cd: "INTRAMETCO", d: "LAREDO, TX", costo: 920, moneda: "USD" },
   { co: "CESAR DELGADO", o: "TLAQUEPAQUE, JAL", cd: "JRG TEZO", d: "TEZOYUCA, EDOMEX", costo: 33060, moneda: "MXP" },
@@ -163,7 +163,7 @@ function resolverTarifaFlete({ origen, destino, negociacion, clienteOrigen, clie
   if (coNorm && cdNorm) {
     const matchAmbos = tarifario.find(r => {
       const matchCO = normalizarTextoFlete(r.co).includes(coNorm) || coNorm.includes(normalizarTextoFlete(r.co));
-      const matchCD = normalizarTextoFlete(r.cd).includes(cdNorm) || cdNorm.includes(normalizarTextoFlete(r.cd));
+      const matchCD = normalizarTextoFlete(r.cd) === cdNorm;
       const matchO = !oConsulta || normalizarTextoFlete(r.o).includes(oConsulta) || oConsulta.includes(normalizarTextoFlete(r.o));
       const matchD = !dConsulta || normalizarTextoFlete(r.d).includes(dConsulta) || dConsulta.includes(normalizarTextoFlete(r.d));
       return matchCO && matchCD && matchO && matchD;
@@ -173,7 +173,7 @@ function resolverTarifaFlete({ origen, destino, negociacion, clienteOrigen, clie
 
   // 5. Si solo se especifica destino o negociación
   const matchRuta = tarifario.find(r => {
-    const matchCD = cdNorm ? (normalizarTextoFlete(r.cd).includes(cdNorm) || cdNorm.includes(normalizarTextoFlete(r.cd))) : true;
+    const matchCD = cdNorm ? normalizarTextoFlete(r.cd) === cdNorm : true;
     const matchO = !oConsulta || normalizarTextoFlete(r.o).includes(oConsulta) || oConsulta.includes(normalizarTextoFlete(r.o));
     const matchD = !dConsulta || normalizarTextoFlete(r.d).includes(dConsulta) || dConsulta.includes(normalizarTextoFlete(r.d));
     return matchCD && matchO && matchD;
