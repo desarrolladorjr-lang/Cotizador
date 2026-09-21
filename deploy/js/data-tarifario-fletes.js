@@ -74,7 +74,9 @@ const TARIFARIO_FLETES = [
   { co: "JERONIMO GENERAL METALES", o: "SAN LUIS POTOSÍ, SLP", cd: "RECICLE", d: "AGUASCALIENTES, AGS", costo: 15500, moneda: "MXP" },
   { co: "TORIBIO", o: "IXTAPALUCA, EDO. MEX.", cd: "EL TEJON", d: "TLAJOMULCO DE ZUÑIGA, JAL", costo: 30740, moneda: "MXP" },
   { co: "NOEMI", o: "TLAHUAC, EDO. MEX", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 30740, moneda: "MXP" },
-  { co: "MARIO PADILLA", o: "JARDINES DE LA CALERA, JAL.", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 24940, moneda: "MXP" }
+  { co: "MARIO PADILLA", o: "JARDINES DE LA CALERA, JAL.", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 24940, moneda: "MXP" },
+  { co: "JRG", o: "APODACA, NL", cd: "LIZHONG", d: "SALINAS VICTORIA, NL", costo: 9280, moneda: "MXP" },
+  { co: "DAVID BORJA HEREDIA", o: "SAN MIGUEL TOTOLCINGO, MEX", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 30740, moneda: "MXP" }
 ];
 
 // Mapa de Cliente Destino -> Ciudad Destino Predeterminada
@@ -153,7 +155,7 @@ function resolverTarifaFlete({ origen, destino, negociacion, clienteOrigen, clie
 
   if (negNorm.includes('RECOLECCION MTY') || negNorm.includes('RECOLECCION BMTY') || negNorm === 'RECO MTY' || negNorm.includes('RECO MTY')) {
     dConsulta = normalizarTextoFlete(BODEGA_MTY);
-  } else if (negNorm.includes('BMTY ENTREGA') || negNorm.includes('BMTY DESTINO') || negNorm.includes('BMTY ENTRE')) {
+  } else if (negNorm.includes('BMTY ENTREGA') || negNorm.includes('BMTY DESTINO') || negNorm.includes('BMTY ENTRE') || negNorm.includes('BMTY DIRECTA')) {
     oConsulta = normalizarTextoFlete(BODEGA_MTY);
   } else if (negNorm.includes('CONCEPTO 2')) {
     oConsulta = normalizarTextoFlete(BODEGA_MTY);
