@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { calcularCotizacion, KG_POR_CARGA, precioTotalNacionalDesdeTon, maniobrasPorNegociacion, MANIOBRAS_BODEGA_MTY } = require('./calc.js');
+const { calcularCotizacion, KG_POR_CARGA, precioTotalNacionalDesdeTon, maniobrasPorNegociacion, resolverNegociacionEfectiva, MANIOBRAS_BODEGA_MTY } = require('./calc.js');
 
 const base = {
   porcentajeFijacion: '100',
@@ -54,6 +54,16 @@ describe('maniobrasPorNegociacion', () => {
 
   it('el monto de bodega es 0.60 por kg', () => {
     expect(MANIOBRAS_BODEGA_MTY).toBe(0.60);
+  });
+});
+
+describe('resolverNegociacionEfectiva', () => {
+  it('respeta entrega directa aunque la modalidad sea Inventario', () => {
+    expect(resolverNegociacionEfectiva('inventario', 'DIRECTO ENTREGA')).toBe('DIRECTO ENTREGA');
+  });
+
+  it('mantiene Inventario como recolección MTY para las demás negociaciones', () => {
+    expect(resolverNegociacionEfectiva('inventario', 'RECOLECCION BMTY')).toBe('RECOLECCION MTY');
   });
 });
 

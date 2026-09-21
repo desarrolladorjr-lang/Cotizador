@@ -1,6 +1,7 @@
 const MATERIALES_POR_CATEGORIA = {
   "Aluminio": [
     "ALUMINIO SERIE 1000",
+    "ALUMINIO BLANDO",
     "ALUMINIO 1070",
     "ALUMINIO 1100",
     "ALUMINIO 3003",
@@ -111,7 +112,10 @@ const listaProveedoresColumnaA = [
 const listaProveedoresEntregaDirecta = [
   "CALDERA",
   "JORGE MEDINA",
+  "JORGE CARDENAS",
   "LUIS GARCÍA",
+  "LUIS ROMO",
+  "MARIO VAZQUEZ",
   "MARIELENA MÉNDEZ"
 ];
 
@@ -141,6 +145,7 @@ const listaClientesColumnaD = [
   "JRG MTY",
   "JRG SLP",
   "JRG TEZO",
+  "LIZHONG",
   "LUIS TORRES",
   "NIKKEI",
   "OMC",
@@ -253,6 +258,7 @@ const listaDestinosColumnaF = [
   "POZA RICA, VER.",
   "RAMOS ARIZPE, COAH",
   "RUSSELLVILLE, KY",
+  "SALINAS VICTORIA, NL",
   "SAN JOSE DEL VERDE, JAL",
   "SAN LUIS POTOSÍ, SLP",
   "TEPEJI, HIDALGO",

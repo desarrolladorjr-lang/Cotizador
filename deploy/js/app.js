@@ -151,8 +151,9 @@ function App() {
   const modalidad  = destinoVenta === 'exportacion' ? modoExport : destinoVenta;
   const tieneVenta = modalidad !== '' && modalidad !== 'inventario';
 
-  // Inventario siempre entra a la bodega de MTY, aunque la negociación no se capture.
-  const negociacionEfectiva = modalidad === 'inventario' ? 'RECOLECCION MTY' : negociacion;
+  // Inventario entra a la bodega de MTY, salvo cuando se marca explícitamente
+  // como entrega directa: en ese caso no debe cargarse flete ni maniobras.
+  const negociacionEfectiva = resolverNegociacionEfectiva(modalidad, negociacion);
   // Las maniobras (0.60 x kg) solo se cobran si la carga pasa por esa bodega.
   const maniobras = maniobrasPorNegociacion(negociacionEfectiva);
 
@@ -302,11 +303,12 @@ function App() {
   const [infoFleteResuelto, setInfoFleteResuelto] = useState(null);
 
   // Los proveedores de la hoja CAT no tienen origen en el tarifario, así que su
-  // negociación sólo puede ser DIRECTO ENTREGA. Se fija sola al elegirlos.
+  // negociación por defecto es DIRECTO ENTREGA. Sólo se propone sola cuando el
+  // usuario aún no ha elegido negociación, para no pisarle un cambio manual.
   useEffect(() => {
     if (typeof window.esProveedorEntregaDirecta !== 'function') return;
     const hayEntregaDirecta = proveedores.some(r => window.esProveedorEntregaDirecta(r.proveedor));
-    if (hayEntregaDirecta && negociacion !== 'DIRECTO ENTREGA') {
+    if (hayEntregaDirecta && negociacion === '') {
       setNegociacion('DIRECTO ENTREGA');
     }
   }, [proveedores, negociacion]);
@@ -404,7 +406,7 @@ function App() {
         setCruceInt('0');
         setInfoFleteResuelto({ costo: 0, moneda: 'MXP', desc: '⚠️ Ruta a Bodega Mty no registrada en el tarifario — Ingresa el flete manualmente', existe: false });
       }
-    } else if (neg === 'BMTY ENTREGA' || neg === 'BMTY DESTINO') {
+    } else if (neg === 'BMTY ENTREGA' || neg === 'BMTY DESTINO' || neg === 'BMTY DIRECTA') {
       let sumNac = 0;
       let hayTarifa = false;
       let descPartes = [];

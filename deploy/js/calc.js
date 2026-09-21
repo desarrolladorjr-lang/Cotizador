@@ -17,12 +17,22 @@
     'RECOLECCION BMTY',
     'BMTY ENTREGA',
     'BMTY DESTINO',
+    'BMTY DIRECTA',
   ];
 
   function maniobrasPorNegociacion(negociacion) {
     if (!negociacion) return 0;
     const negNorm = String(negociacion).trim().toUpperCase();
     return NEGOCIACIONES_CON_BODEGA_MTY.includes(negNorm) ? MANIOBRAS_BODEGA_MTY : 0;
+  }
+
+  // Inventario normalmente implica entrada a Bodega MTY. Entrega directa es la
+  // excepción explícita: el material no pasa por la bodega y no lleva flete.
+  function resolverNegociacionEfectiva(modalidad, negociacion) {
+    if (String(negociacion || '').trim().toUpperCase() === 'DIRECTO ENTREGA') {
+      return 'DIRECTO ENTREGA';
+    }
+    return modalidad === 'inventario' ? 'RECOLECCION MTY' : negociacion;
   }
 
   const truncar = n => Math.trunc(n * 100) / 100;
@@ -115,6 +125,7 @@
   const api = {
     KG_POR_CARGA, calcularCotizacion, precioTotalNacionalDesdeTon,
     MANIOBRAS_BODEGA_MTY, NEGOCIACIONES_CON_BODEGA_MTY, maniobrasPorNegociacion,
+    resolverNegociacionEfectiva,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else Object.assign(root, api);
