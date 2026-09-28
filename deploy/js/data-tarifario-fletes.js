@@ -76,7 +76,8 @@ const TARIFARIO_FLETES = [
   { co: "NOEMI", o: "TLAHUAC, EDO. MEX", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 30740, moneda: "MXP" },
   { co: "MARIO PADILLA", o: "JARDINES DE LA CALERA, JAL.", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 24940, moneda: "MXP" },
   { co: "JRG", o: "APODACA, NL", cd: "LIZHONG", d: "SALINAS VICTORIA, NL", costo: 9280, moneda: "MXP" },
-  { co: "DAVID BORJA HEREDIA", o: "SAN MIGUEL TOTOLCINGO, MEX", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 30740, moneda: "MXP" }
+  { co: "DAVID BORJA HEREDIA", o: "SAN MIGUEL TOTOLCINGO, MEX", cd: "ALUMINUM DYNAMICS SLP", d: "SAN LUIS POTOSÍ, SLP", costo: 30740, moneda: "MXP" },
+  { co: "BMTY", o: "GRAL. ESCOBÉDO, NL", cd: "SCHUPAN", d: "LAREDO, TX", costo: 17500, moneda: "MXP" }
 ];
 
 // Mapa de Cliente Destino -> Ciudad Destino Predeterminada
