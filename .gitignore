@@ -18,6 +18,7 @@ Thumbs.db
 
 .vercel
 .env*
+.vercel.bak-mal-enlazado/
 
 # Herramienta y salida de graphify (generadas, ~80 MB)
 graphify/

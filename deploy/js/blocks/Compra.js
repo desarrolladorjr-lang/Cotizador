@@ -138,11 +138,67 @@ function SelectorMaterialCustom({ material, setMaterial, opcionesMaterial }) {
   );
 }
 
+// Desglose de MATERIALES VARIOS: solo informativo (va a notas), no alimenta el
+// cálculo — ppProv se sigue llenando a mano como siempre.
+function ListaMaterialesVarios({ materialesVarios, setMaterialesVarios }) {
+  const [matSel, setMatSel] = React.useState('');
+  const [precioSel, setPrecioSel] = React.useState('');
+
+  const opciones = (typeof todosLosMateriales !== 'undefined' ? todosLosMateriales : [])
+    .filter(m => m !== 'MATERIALES VARIOS');
+
+  const agregar = () => {
+    if (!matSel || !precioSel) return;
+    setMaterialesVarios([...materialesVarios, { material: matSel, precio: precioSel }]);
+    setMatSel('');
+    setPrecioSel('');
+  };
+
+  const quitar = i => setMaterialesVarios(materialesVarios.filter((_, j) => j !== i));
+
+  return (
+    <div className="space-y-2 bg-black/40 border border-gray-700 rounded-lg p-2.5">
+      <div className="space-y-1.5">
+        <select value={matSel} onChange={e => setMatSel(e.target.value)}
+                className="w-full bg-black border border-gray-700 rounded-lg p-2 text-white font-bold text-xs outline-none focus:border-amber-500">
+          <option value="">— Material —</option>
+          {opciones.map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
+            <span className="absolute left-2 top-2 text-gray-400 font-bold text-xs">$</span>
+            <input type="number" step="0.01" value={precioSel} onChange={e => setPrecioSel(e.target.value)}
+                   className="w-full bg-black border border-gray-700 rounded-lg p-2 pl-5 text-white font-bold text-xs outline-none focus:border-amber-500" />
+          </div>
+          <button type="button" onClick={agregar}
+                  className="shrink-0 px-2.5 py-2 rounded-lg bg-amber-500 text-black font-black text-xs hover:bg-amber-400">
+            Agregar
+          </button>
+        </div>
+      </div>
+      {materialesVarios.length > 0 && (
+        <div className="space-y-1">
+          {materialesVarios.map((row, i) => (
+            <div key={i} className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-lg px-2.5 py-1.5 text-xs">
+              <span className="text-gray-200 font-semibold">{row.material}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-amber-300 font-mono font-bold">${Number(row.precio).toFixed(2)}</span>
+                <button type="button" onClick={() => quitar(i)} className="text-red-400 hover:text-red-300 font-black">✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Bloque de compra. Igual en las cuatro modalidades: el material se compra siempre
 // del mismo modo; lo que cambia por modalidad es cómo se vende.
 function BloqueCompra({
   proveedores, setProveedores, opcionesProveedor,
   material, setMaterial, opcionesMaterial,
+  materialesVarios, setMaterialesVarios,
   embalaje, setEmbalaje,
   negociacion, setNegociacion,
   ppProv, setPpProv,
@@ -207,6 +263,13 @@ function BloqueCompra({
         setMaterial={setMaterial}
         opcionesMaterial={opcionesMaterial}
       />
+
+      {material === 'MATERIALES VARIOS' && (
+        <ListaMaterialesVarios
+          materialesVarios={materialesVarios}
+          setMaterialesVarios={setMaterialesVarios}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>

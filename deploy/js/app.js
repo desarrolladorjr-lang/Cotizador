@@ -122,6 +122,9 @@ function App() {
   const [ppProv, setPpProv] = useState("40.00");
 
   const [material, setMaterial] = useState('UBC');
+  // Desglose informativo cuando material === 'MATERIALES VARIOS'. No alimenta el
+  // cálculo (ppProv sigue siendo manual); se anexa a notas al guardar.
+  const [materialesVarios, setMaterialesVarios] = useState([]);
   const [destino, setDestino] = useState('');
   const [origenEmbarque, setOrigenEmbarque] = useState('');
   const [rutaNacSelect, setRutaNacSelect] = useState('');
@@ -702,6 +705,7 @@ function App() {
     setMerma("1");
     setPpProv("40.00");
     setMaterial('UBC');
+    setMaterialesVarios([]);
     setDestino('');
     setOrigenEmbarque('');
     setRutaNacSelect('');
@@ -742,6 +746,13 @@ function App() {
 
     setGuardando(true);
     try {
+      // Materiales varios es solo desglose informativo: se anexa a notas en vez
+      // de tocar el contrato del payload con Codigo.gs.
+      const notasFinal = material === 'MATERIALES VARIOS' && materialesVarios.length > 0
+        ? [notas, 'Materiales varios: ' + materialesVarios.map(r => `${r.material} $${Number(r.precio).toFixed(2)}`).join(', ')]
+            .filter(Boolean).join(' | ')
+        : notas;
+
       const payload = construirPayload({
         credential: sesionActiva.credential || '',
         sesion: sesionActiva.token || '',
@@ -750,7 +761,7 @@ function App() {
         modalidad, cliente, proveedores, opcionesProveedor: opcionesProveedorActual,
         material, destino, origenEmbarque,
         porcentajeFijacion, fixPrice, tcHoy,
-        fleteNac, cruceInt, ppProv, notas, diasCobro, merma,
+        fleteNac, cruceInt, ppProv, notas: notasFinal, diasCobro, merma,
         embalaje, negociacion,
         origenFlete: comprasOrigenFlete,
         destinoFlete: comprasDestinoFlete,
@@ -881,6 +892,7 @@ function App() {
             opcionesProveedor={opcionesProveedorActual}
             material={material} setMaterial={setMaterial}
             opcionesMaterial={opcionesMaterialActual}
+            materialesVarios={materialesVarios} setMaterialesVarios={setMaterialesVarios}
             embalaje={embalaje} setEmbalaje={setEmbalaje}
             negociacion={negociacion} setNegociacion={setNegociacion}
             ppProv={ppProv} setPpProv={setPpProv}
